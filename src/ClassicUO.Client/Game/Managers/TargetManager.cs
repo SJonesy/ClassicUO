@@ -1,34 +1,4 @@
-﻿#region license
-
-// Copyright (c) 2024, andreakarasho
-// All rights reserved.
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. All advertising materials mentioning features or use of this software
-//    must display the following acknowledgement:
-//    This product includes software developed by andreakarasho - https://github.com/andreakarasho
-// 4. Neither the name of the copyright holder nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ''AS IS'' AND ANY
-// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY
-// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-#endregion
+﻿// SPDX-License-Identifier: BSD-2-Clause
 
 using ClassicUO.Configuration;
 using ClassicUO.Game.Data;
@@ -39,6 +9,7 @@ using ClassicUO.Assets;
 using ClassicUO.Network;
 using ClassicUO.Resources;
 using ClassicUO.Utility;
+using System;
 
 namespace ClassicUO.Game.Managers
 {
@@ -52,7 +23,8 @@ namespace ClassicUO.Game.Managers
         Grab,
         SetGrabBag,
         HueCommandTarget,
-        IgnorePlayerTarget
+        IgnorePlayerTarget,
+        CallbackTarget
     }
 
     internal class CursorType
@@ -133,11 +105,12 @@ namespace ClassicUO.Game.Managers
         private uint _targetCursorId;
         private readonly World _world;
         private readonly byte[] _lastDataBuffer = new byte[19];
+        private Action<GameObject> _targetCallback;
 
 
         public TargetManager(World world) { _world = world; }
 
-        public uint LastAttack, SelectedTarget;
+        public uint LastAttack, SelectedTarget, NewTargetSystemSerial;
 
         public readonly LastTargetInfo LastTargetInfo = new LastTargetInfo();
 
@@ -166,10 +139,19 @@ namespace ClassicUO.Game.Managers
         {
             ClearTargetingWithoutTargetCancelPacket();
 
+            _targetCallback = null;
+
             TargetingState = 0;
             _targetCursorId = 0;
             MultiTargetInfo = null;
             TargetingType = 0;
+        }
+
+        public void SetTargeting(Action<GameObject> callback, uint cursorID, TargetType cursorType)
+        {
+            SetTargeting(CursorTarget.CallbackTarget, cursorID, cursorType);
+
+            _targetCallback = callback;
         }
 
         public void SetTargeting(CursorTarget targeting, uint cursorID, TargetType cursorType)
@@ -216,6 +198,11 @@ namespace ClassicUO.Game.Managers
 
                     UIManager.GetGump<HouseCustomizationGump>()?.Update();
                 }
+            }
+
+            if (TargetingState == CursorTarget.CallbackTarget)
+            {
+                _targetCallback?.Invoke(null);
             }
 
             if (IsTargeting || TargetingType == TargetType.Cancel)
@@ -408,6 +395,11 @@ namespace ClassicUO.Game.Managers
                         }
                         CancelTarget();
                         return;
+                    case CursorTarget.CallbackTarget:
+                        _targetCallback?.Invoke(entity);
+
+                        ClearTargetingWithoutTargetCancelPacket();
+                        return;
                 }
             }
         }
@@ -419,6 +411,25 @@ namespace ClassicUO.Game.Managers
                 return;
             }
 
+            switch (TargetingState)
+            {
+                case CursorTarget.CallbackTarget:
+                    GameObject candidate = _world.Map.GetTile(x, y);
+
+                    while (candidate != null)
+                    {
+                        if (candidate.Graphic == graphic && candidate.Z == z)
+                        {
+                            _targetCallback?.Invoke(candidate);
+                            break;
+                        }
+                        candidate = candidate.TNext;
+                    }
+
+                    ClearTargetingWithoutTargetCancelPacket();
+                    return;
+            }
+
             if (graphic == 0)
             {
                 if (TargetingState == CursorTarget.Object)
@@ -428,12 +439,12 @@ namespace ClassicUO.Game.Managers
             }
             else
             {
-                if (graphic >= TileDataLoader.Instance.StaticData.Length)
+                if (graphic >= Client.Game.UO.FileManager.TileData.StaticData.Length)
                 {
                     return;
                 }
 
-                ref StaticTiles itemData = ref TileDataLoader.Instance.StaticData[graphic];
+                ref StaticTiles itemData = ref Client.Game.UO.FileManager.TileData.StaticData[graphic];
 
                 if (Client.Game.UO.Version >= ClientVersion.CV_7090 && itemData.IsSurface)
                 {

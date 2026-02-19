@@ -1,47 +1,15 @@
-﻿#region license
+﻿// SPDX-License-Identifier: BSD-2-Clause
 
-// Copyright (c) 2024, andreakarasho
-// All rights reserved.
-// 
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. All advertising materials mentioning features or use of this software
-//    must display the following acknowledgement:
-//    This product includes software developed by andreakarasho - https://github.com/andreakarasho
-// 4. Neither the name of the copyright holder nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-// 
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ''AS IS'' AND ANY
-// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY
-// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-#endregion
-
-using System;
-using System.Collections.Generic;
-using System.Text;
+using ClassicUO.Assets;
 using ClassicUO.Configuration;
 using ClassicUO.Game.Data;
 using ClassicUO.Game.GameObjects;
 using ClassicUO.Game.UI.Controls;
 using ClassicUO.Game.UI.Gumps;
-using ClassicUO.Assets;
-using ClassicUO.Renderer;
+using ClassicUO.Network;
 using ClassicUO.Utility;
-using ClassicUO.Game.Scenes;
+using System;
+using System.Collections.Generic;
 
 namespace ClassicUO.Game.Managers
 {
@@ -73,15 +41,43 @@ namespace ClassicUO.Game.Managers
     {
         private readonly World _world;
 
+        public event EventHandler<PromptData> ServerPromptChanged;
+
         public MessageManager(World world) => _world = world;
 
 
-        public PromptData PromptData { get; set; }
+        public PromptData PromptData
+        {
+            get => field;
+            set
+            {
+                field = value;
+                ServerPromptChanged?.Invoke(this, value);
+            }
+        }
 
         public event EventHandler<MessageEventArgs> MessageReceived;
 
         public event EventHandler<MessageEventArgs> LocalizedMessageReceived;
 
+        public void CancelServerPrompt()
+        {
+            SendServerPromptResponse(string.Empty);
+        }
+
+        public void SendServerPromptResponse(string text)
+        {
+            if (PromptData.Prompt == ConsolePrompt.ASCII)
+            {
+                NetClient.Socket.Send_ASCIIPromptResponse(_world, text, text.Length < 1);
+            }
+            else if (PromptData.Prompt == ConsolePrompt.Unicode)
+            {
+                NetClient.Socket.Send_UnicodePromptResponse(_world, text, Settings.GlobalSettings.Language, text.Length < 1);
+            }
+
+            PromptData = default;
+        }
 
         public void HandleMessage
         (
@@ -115,6 +111,37 @@ namespace ClassicUO.Game.Managers
                 case MessageType.Encoded:
                 case MessageType.System:
                 case MessageType.Party:
+                    if (!currentProfile.OverheadPartyMessages)
+                        break;
+
+                    if (parent == null) //No parent entity, need to check party members by name
+                    {
+                        foreach (PartyMember member in _world.Party.Members)
+                            if (member != null)
+                                if (member.Name == name) //Name matches message from server
+                                {
+                                    Mobile m = _world.Mobiles.Get(member.Serial);
+                                    if (m != null) //Mobile exists
+                                    {
+                                        parent = m;
+                                        break;
+                                    }
+                                }
+                    }
+
+                    if (type != MessageType.Spell && parent != null && _world.IgnoreManager.IgnoredCharsList.Contains(parent.Name))
+                        break;
+
+                    //Add null check in case parent was not found above.
+                    parent?.AddMessage(CreateMessage
+                    (
+                        text,
+                        hue,
+                        font,
+                        unicode,
+                        type,
+                        textType
+                    ));
                     break;
 
                 case MessageType.Guild:
@@ -199,7 +226,7 @@ namespace ClassicUO.Game.Managers
                         msg.IsTextGump = true;
                         bool found = false;
 
-                        for (LinkedListNode<Gump> gump = UIManager.Gumps.Last; gump != null; gump = gump.Previous)
+                        for (LinkedListNode<UI.Gumps.Gump> gump = UIManager.Gumps.Last; gump != null; gump = gump.Previous)
                         {
                             Control g = gump.Value;
 
@@ -278,12 +305,12 @@ namespace ClassicUO.Game.Managers
                 isunicode = ProfileManager.CurrentProfile.OverrideAllFontsIsUnicode;
             }
 
-            int width = isunicode ? FontsLoader.Instance.GetWidthUnicode(font, msg) : FontsLoader.Instance.GetWidthASCII(font, msg);
+            int width = isunicode ? Client.Game.UO.FileManager.Fonts.GetWidthUnicode(font, msg) : Client.Game.UO.FileManager.Fonts.GetWidthASCII(font, msg);
 
             if (width > 200)
             {
                 width = isunicode ?
-                    FontsLoader.Instance.GetWidthExUnicode
+                    Client.Game.UO.FileManager.Fonts.GetWidthExUnicode
                     (
                         font,
                         msg,
@@ -291,7 +318,7 @@ namespace ClassicUO.Game.Managers
                         TEXT_ALIGN_TYPE.TS_LEFT,
                         (ushort) FontStyle.BlackBorder
                     ) :
-                    FontsLoader.Instance.GetWidthExASCII
+                    Client.Game.UO.FileManager.Fonts.GetWidthExASCII
                     (
                         font,
                         msg,
@@ -332,7 +359,7 @@ namespace ClassicUO.Game.Managers
             {
                 fixedColor = 0x7FFF;
             }
-            
+
             textObject.RenderedText = RenderedText.Create
             (
                 msg,

@@ -1,37 +1,8 @@
-﻿#region license
-
-// Copyright (c) 2024, andreakarasho
-// All rights reserved.
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. All advertising materials mentioning features or use of this software
-//    must display the following acknowledgement:
-//    This product includes software developed by andreakarasho - https://github.com/andreakarasho
-// 4. Neither the name of the copyright holder nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ''AS IS'' AND ANY
-// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY
-// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-#endregion
+﻿// SPDX-License-Identifier: BSD-2-Clause
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using ClassicUO.Game.Data;
 using ClassicUO.Game.GameObjects;
 using ClassicUO.Game.Managers;
@@ -63,6 +34,7 @@ namespace ClassicUO.Game.UI.Gumps
             CanCloseWithRightClick = true;
             _customHouseManager = new HouseCustomizationManager(world, serial);
             World.CustomHouseManager = _customHouseManager;
+            SetOtherHousesState(false);
 
             Add(new GumpPicTiled(121, 36, 397, 120, 0x0E14));
 
@@ -227,6 +199,18 @@ namespace ClassicUO.Game.UI.Gumps
 
             UpdateMaxPage();
             Update();
+        }
+
+        private void SetOtherHousesState(bool visible)
+        {
+            foreach (var multi in World.HouseManager.Houses.Where(s => s.Serial != LocalSerial)
+                                       .SelectMany(s => s.Components))
+            {
+                if (visible)
+                    multi.State &= ~CUSTOM_HOUSE_MULTI_OBJECT_FLAGS.CHMOF_IGNORE_IN_RENDER;
+                else
+                    multi.State |= CUSTOM_HOUSE_MULTI_OBJECT_FLAGS.CHMOF_IGNORE_IN_RENDER;
+            }
         }
 
         public new void Update()
@@ -660,7 +644,7 @@ namespace ClassicUO.Game.UI.Gumps
 
             _textFixtures.Text = _customHouseManager.Fixtures.ToString();
 
-            string tooltip = ClilocLoader.Instance.Translate(
+            string tooltip = Client.Game.UO.FileManager.Clilocs.Translate(
                 1061039,
                 $"{_customHouseManager.MaxComponets}\t{_customHouseManager.MaxFixtures}",
                 true
@@ -797,7 +781,7 @@ namespace ClassicUO.Game.UI.Gumps
                         Y = offsetY,
                         CanMove = false,
                         LocalSerial = (uint)(ID_GUMP_CUSTOM_HOUSE.ID_GCH_ITEM_IN_LIST + i),
-                        Height = 60
+                        Height = artInfo.UV.Height < 60 ? artInfo.UV.Height : 60
                     };
 
                     pic.MouseUp += (sender, e) =>
@@ -857,7 +841,7 @@ namespace ClassicUO.Game.UI.Gumps
                                 Y = offsetY,
                                 CanMove = false,
                                 LocalSerial = (uint)(ID_GUMP_CUSTOM_HOUSE.ID_GCH_ITEM_IN_LIST + i),
-                                Height = 120
+                                // Height = 120
                             };
 
                             pic.MouseUp += (sender, e) =>
@@ -965,7 +949,7 @@ namespace ClassicUO.Game.UI.Gumps
                             Y = offsetY,
                             CanMove = false,
                             LocalSerial = (uint)(ID_GUMP_CUSTOM_HOUSE.ID_GCH_ITEM_IN_LIST + i),
-                            Height = 120
+                            // Height = 120
                         };
 
                         pic.MouseUp += (sender, e) =>
@@ -1144,7 +1128,7 @@ namespace ClassicUO.Game.UI.Gumps
                     _dataBox.Add(new ScissorControl(true, 121, 36 + y, 384, 60));
 
                     Label text = new Label(
-                        ClilocLoader.Instance.GetString(1062113 + j),
+                        Client.Game.UO.FileManager.Clilocs.GetString(1062113 + j),
                         true,
                         0xFFFF,
                         90,
@@ -1425,7 +1409,8 @@ namespace ClassicUO.Game.UI.Gumps
                         Y = offsetY,
                         CanMove = false,
                         LocalSerial = (uint)(ID_GUMP_CUSTOM_HOUSE.ID_GCH_ITEM_IN_LIST + i),
-                        Height = 60
+                        Width = artInfo.UV.Width < 48 ? artInfo.UV.Width : 48,
+                        Height = artInfo.UV.Height < 60 ? artInfo.UV.Height : 60
                     };
 
                     pic.MouseUp += (sender, e) =>
@@ -2095,6 +2080,7 @@ namespace ClassicUO.Game.UI.Gumps
 
         public override void Dispose()
         {
+            SetOtherHousesState(true);
             World.CustomHouseManager = null;
             NetClient.Socket.Send_CustomHouseBuildingExit(World);
             World.TargetManager.CancelTarget();

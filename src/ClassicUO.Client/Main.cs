@@ -1,34 +1,4 @@
-﻿#region license
-
-// Copyright (c) 2024, andreakarasho
-// All rights reserved.
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. All advertising materials mentioning features or use of this software
-//    must display the following acknowledgement:
-//    This product includes software developed by andreakarasho - https://github.com/andreakarasho
-// 4. Neither the name of the copyright holder nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ''AS IS'' AND ANY
-// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY
-// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-#endregion
+﻿// SPDX-License-Identifier: BSD-2-Clause
 
 using ClassicUO.Configuration;
 using ClassicUO.Game;
@@ -39,7 +9,7 @@ using ClassicUO.Resources;
 using ClassicUO.Utility;
 using ClassicUO.Utility.Logging;
 using ClassicUO.Utility.Platforms;
-using SDL2;
+using SDL3;
 using System;
 using System.Globalization;
 using System.IO;
@@ -51,11 +21,6 @@ namespace ClassicUO
 {
     internal static class Bootstrap
     {
-        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        private static extern bool SetDllDirectory(string lpPathName);
-
-
         [UnmanagedCallersOnly(EntryPoint = "Initialize", CallConvs = new Type[] { typeof(CallConvCdecl) })]
         static unsafe void Initialize(IntPtr* argv, int argc, HostBindings* hostSetup)
         {
@@ -79,6 +44,8 @@ namespace ClassicUO
             CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
 
             Log.Start(LogTypes.All);
+
+            DllMap.Init();
 
             CUOEnviroment.GameThread = Thread.CurrentThread;
             CUOEnviroment.GameThread.Name = "CUO_MAIN_THREAD";
@@ -131,15 +98,11 @@ namespace ClassicUO
                 Environment.SetEnvironmentVariable("FNA_GRAPHICS_ENABLE_HIGHDPI", "1");
             }
 
-            //Environment.SetEnvironmentVariable("FNA3D_FORCE_DRIVER", "OpenGL");
-
             // NOTE: this is a workaroud to fix d3d11 on windows 11 + scale windows
             Environment.SetEnvironmentVariable("FNA3D_D3D11_FORCE_BITBLT", "1");
-
             Environment.SetEnvironmentVariable("FNA3D_BACKBUFFER_SCALE_NEAREST", "1");
             Environment.SetEnvironmentVariable("FNA3D_OPENGL_FORCE_COMPATIBILITY_PROFILE", "1");
             Environment.SetEnvironmentVariable(SDL.SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH, "1");
-
             Environment.SetEnvironmentVariable("PATH", Environment.GetEnvironmentVariable("PATH") + ";" + Path.Combine(CUOEnviroment.ExecutablePath, "Data", "Plugins"));
 
             string globalSettingsPath = Settings.GetSettingsFilepath();
@@ -153,8 +116,7 @@ namespace ClassicUO
                 }
             }
 
-            Settings.GlobalSettings = ConfigurationResolver.Load<Settings>(globalSettingsPath, SettingsJsonContext.RealDefault.Settings);
-            CUOEnviroment.IsOutlands = Settings.GlobalSettings.ShardType == 2;
+            Settings.GlobalSettings = ConfigurationResolver.Load(globalSettingsPath, SettingsJsonContext.RealDefault.Settings);
 
             ReadSettingsFromArgs(args);
 
@@ -163,13 +125,6 @@ namespace ClassicUO
             {
                 Settings.GlobalSettings = new Settings();
                 Settings.GlobalSettings.Save();
-            }
-
-            if (!CUOEnviroment.IsUnix)
-            {
-                string libsPath = Path.Combine(CUOEnviroment.ExecutablePath, Environment.Is64BitProcess ? "x64" : "x86");
-
-                SetDllDirectory(libsPath);
             }
 
             if (string.IsNullOrWhiteSpace(Settings.GlobalSettings.Language))
@@ -335,7 +290,7 @@ namespace ClassicUO
 
                     case "filesoverride":
                     case "uofilesoverride":
-                        UOFilesOverrideMap.OverrideFile = value;
+                        Settings.GlobalSettings.OverrideFile = value;
 
                         break;
 
@@ -431,20 +386,6 @@ namespace ClassicUO
                     case "login_music_volume":
                     case "music_volume":
                         Settings.GlobalSettings.LoginMusicVolume = int.Parse(value);
-
-                        break;
-
-                    // ======= [SHARD_TYPE_FIX] =======
-                    // TODO old. maintain it for retrocompatibility
-                    case "shard_type":
-                    case "shard":
-                        Settings.GlobalSettings.ShardType = int.Parse(value);
-
-                        break;
-                    // ================================
-
-                    case "outlands":
-                        CUOEnviroment.IsOutlands = true;
 
                         break;
 

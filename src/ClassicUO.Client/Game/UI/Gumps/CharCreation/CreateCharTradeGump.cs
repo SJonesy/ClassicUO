@@ -1,34 +1,4 @@
-﻿#region license
-
-// Copyright (c) 2024, andreakarasho
-// All rights reserved.
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. All advertising materials mentioning features or use of this software
-//    must display the following acknowledgement:
-//    This product includes software developed by andreakarasho - https://github.com/andreakarasho
-// 4. Neither the name of the copyright holder nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ''AS IS'' AND ANY
-// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY
-// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-#endregion
+﻿// SPDX-License-Identifier: BSD-2-Clause
 
 using System.Linq;
 using System;
@@ -92,7 +62,7 @@ namespace ClassicUO.Game.UI.Gumps.CharCreation
             //TextLabelAscii(AControl parent, int x, int y, int font, int hue, string text, int width = 400)
             Add
             (
-                new Label(ClilocLoader.Instance.GetString(3000326), unicode, hue, font: font)
+                new Label(Client.Game.UO.FileManager.Clilocs.GetString(3000326), unicode, hue, font: font)
                 {
                     X = 148, Y = 132
                 }
@@ -101,7 +71,7 @@ namespace ClassicUO.Game.UI.Gumps.CharCreation
             // strength, dexterity, intelligence
             Add
             (
-                new Label(ClilocLoader.Instance.GetString(3000111), unicode, 1, font: 1)
+                new Label(Client.Game.UO.FileManager.Clilocs.GetString(3000111), unicode, 1, font: 1)
                 {
                     X = 158, Y = 170
                 }
@@ -109,7 +79,7 @@ namespace ClassicUO.Game.UI.Gumps.CharCreation
 
             Add
             (
-                new Label(ClilocLoader.Instance.GetString(3000112), unicode, 1, font: 1)
+                new Label(Client.Game.UO.FileManager.Clilocs.GetString(3000112), unicode, 1, font: 1)
                 {
                     X = 158, Y = 250
                 }
@@ -117,7 +87,7 @@ namespace ClassicUO.Game.UI.Gumps.CharCreation
 
             Add
             (
-                new Label(ClilocLoader.Instance.GetString(3000113), unicode, 1, font: 1)
+                new Label(Client.Game.UO.FileManager.Clilocs.GetString(3000113), unicode, 1, font: 1)
                 {
                     X = 158, Y = 330
                 }
@@ -125,6 +95,8 @@ namespace ClassicUO.Game.UI.Gumps.CharCreation
 
             // sliders for attributes
             _attributeSliders = new HSliderBar[3];
+
+            (var defSkillsValues, var defStatsValues) = ProfessionInfo.GetDefaults(Client.Game.UO.Version);
 
             Add
             (
@@ -135,7 +107,7 @@ namespace ClassicUO.Game.UI.Gumps.CharCreation
                     93,
                     10,
                     60,
-                    ProfessionInfo._VoidStats[0],
+                    defStatsValues[0],
                     HSliderBarStyle.MetalWidgetRecessedBar,
                     true
                 )
@@ -150,7 +122,7 @@ namespace ClassicUO.Game.UI.Gumps.CharCreation
                     93,
                     10,
                     60,
-                    ProfessionInfo._VoidStats[1],
+                    defStatsValues[1],
                     HSliderBarStyle.MetalWidgetRecessedBar,
                     true
                 )
@@ -165,7 +137,7 @@ namespace ClassicUO.Game.UI.Gumps.CharCreation
                     93,
                     10,
                     60,
-                    ProfessionInfo._VoidStats[2],
+                    defStatsValues[2],
                     HSliderBarStyle.MetalWidgetRecessedBar,
                     true
                 )
@@ -173,7 +145,7 @@ namespace ClassicUO.Game.UI.Gumps.CharCreation
 
             var clientFlags = World.ClientLockedFeatures.Flags;
 
-            _skillList = SkillsLoader.Instance.SortedSkills
+            _skillList = Client.Game.UO.FileManager.Skills.SortedSkills
                          .Where(s =>
                                      // All standard client versions ignore these skills by defualt
                                      //s.Index != 26 && // MagicResist
@@ -183,7 +155,7 @@ namespace ClassicUO.Game.UI.Gumps.CharCreation
                                      (character.Race == RaceType.GARGOYLE || s.Index != 57) // Throwing for gargoyle only
                                  )
                           .Where(s =>
-                                    clientFlags.HasFlag(LockedFeatureFlags.ExpansionAOS) ||
+                                    clientFlags.HasFlag(LockedFeatureFlags.AOS) ||
                                     (
                                         s.Index != 51 && // Chivlary
                                         s.Index != 50 && // Focus
@@ -192,7 +164,7 @@ namespace ClassicUO.Game.UI.Gumps.CharCreation
                                 )
 
                           .Where(s =>
-                                    clientFlags.HasFlag(LockedFeatureFlags.ExpansionSE) ||
+                                    clientFlags.HasFlag(LockedFeatureFlags.SE) ||
                                     (
                                         s.Index != 52 && // Bushido
                                         s.Index != 53    // Ninjitsu
@@ -200,7 +172,7 @@ namespace ClassicUO.Game.UI.Gumps.CharCreation
                                 )
 
                           .Where(s =>
-                                    clientFlags.HasFlag(LockedFeatureFlags.ExpansionSA) ||
+                                    clientFlags.HasFlag(LockedFeatureFlags.SA) ||
                                     (
                                         s.Index != 55 && // Mysticism
                                         s.Index != 56    // Imbuing
@@ -250,7 +222,7 @@ namespace ClassicUO.Game.UI.Gumps.CharCreation
                         93,
                         0,
                         50,
-                        ProfessionInfo._VoidSkills[i, 1],
+                        defSkillsValues[i, 1],
                         HSliderBarStyle.MetalWidgetRecessedBar,
                         true
                     )
@@ -346,14 +318,14 @@ namespace ClassicUO.Game.UI.Gumps.CharCreation
 
                 if (duplicated > 0)
                 {
-                    UIManager.GetGump<CharCreationGump>()?.ShowMessage(ClilocLoader.Instance.GetString(1080032));
+                    UIManager.GetGump<CharCreationGump>()?.ShowMessage(Client.Game.UO.FileManager.Clilocs.GetString(1080032));
 
                     return false;
                 }
             }
             else
             {
-                UIManager.GetGump<CharCreationGump>()?.ShowMessage(Client.Game.UO.Version <= ClientVersion.CV_5090 ? ResGumps.YouMustHaveThreeUniqueSkillsChosen : ClilocLoader.Instance.GetString(1080032));
+                UIManager.GetGump<CharCreationGump>()?.ShowMessage(Client.Game.UO.Version <= ClientVersion.CV_5090 ? ResGumps.YouMustHaveThreeUniqueSkillsChosen : Client.Game.UO.FileManager.Clilocs.GetString(1080032));
 
                 return false;
             }

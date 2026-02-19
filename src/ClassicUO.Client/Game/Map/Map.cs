@@ -1,34 +1,4 @@
-#region license
-
-// Copyright (c) 2024, andreakarasho
-// All rights reserved.
-// 
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. All advertising materials mentioning features or use of this software
-//    must display the following acknowledgement:
-//    This product includes software developed by andreakarasho - https://github.com/andreakarasho
-// 4. Neither the name of the copyright holder nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-// 
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ''AS IS'' AND ANY
-// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY
-// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-#endregion
+// SPDX-License-Identifier: BSD-2-Clause
 
 using System;
 using System.Collections.Generic;
@@ -40,44 +10,26 @@ namespace ClassicUO.Game.Map
 {
     internal sealed class Map
     {
-        private static readonly Chunk[] _terrainChunks;
+        private static Chunk[] _terrainChunks;
         private static readonly bool[] _blockAccessList = new bool[0x1000];
         private readonly LinkedList<int> _usedIndices = new LinkedList<int>();
         private readonly World _world;
 
-        static Map()
-        {
-            int maxX = -1, maxY = -1;
-
-            for (int i = 0; i < MapLoader.Instance.MapBlocksSize.GetLength(0); i++)
-            {
-                if (maxX < MapLoader.Instance.MapBlocksSize[i, 0])
-                {
-                    maxX = MapLoader.Instance.MapBlocksSize[i, 0];
-                }
-
-                if (maxY < MapLoader.Instance.MapBlocksSize[i, 1])
-                {
-                    maxY = MapLoader.Instance.MapBlocksSize[i, 1];
-                }
-            }
-
-
-            _terrainChunks = new Chunk[maxX * maxY];
-        }
 
         public Map(World world, int index)
         {
             _world = world;
             Index = index;
-            BlocksCount = MapLoader.Instance.MapBlocksSize[Index, 0] * MapLoader.Instance.MapBlocksSize[Index, 1];
+            BlocksCount = Client.Game.UO.FileManager.Maps.MapBlocksSize[Index, 0] * Client.Game.UO.FileManager.Maps.MapBlocksSize[Index, 1];
+
+            if (_terrainChunks == null || BlocksCount > _terrainChunks.Length)
+                _terrainChunks = new Chunk[BlocksCount];
+
             ClearBockAccess();
         }
 
         public readonly int BlocksCount;
         public readonly int Index;
-
-
 
 
         public Chunk GetChunk(int block)
@@ -99,9 +51,15 @@ namespace ClassicUO.Game.Map
 
             int cellX = x >> 3;
             int cellY = y >> 3;
-            int block = GetBlock(cellX, cellY);
 
-            if (block >= BlocksCount)
+            return GetChunk2(cellX, cellY, load);
+        }
+
+        public Chunk GetChunk2(int chunkX, int chunkY, bool load = true)
+        {
+            int block = GetBlock(chunkX, chunkY);
+
+            if (block >= BlocksCount || block >= _terrainChunks.Length)
             {
                 return null;
             }
@@ -116,7 +74,7 @@ namespace ClassicUO.Game.Map
                 }
 
                 LinkedListNode<int> node = _usedIndices.AddLast(block);
-                chunk = Chunk.Create(_world, cellX, cellY);
+                chunk = Chunk.Create(_world, chunkX, chunkY);
                 chunk.Load(Index);
                 chunk.Node = node;
             }
@@ -129,8 +87,8 @@ namespace ClassicUO.Game.Map
                 }
 
                 LinkedListNode<int> node = _usedIndices.AddLast(block);
-                chunk.X = cellX;
-                chunk.Y = cellY;
+                chunk.X = chunkX;
+                chunk.Y = chunkY;
                 chunk.Load(Index);
                 chunk.Node = node;
             }
@@ -153,9 +111,9 @@ namespace ClassicUO.Game.Map
                 return -125;
             }
 
-            ref IndexMap blockIndex = ref GetIndex(x >> 3, y >> 3);
+            ref var blockIndex = ref GetIndex(x >> 3, y >> 3);
 
-            if (blockIndex.MapAddress == 0)
+            if (!blockIndex.IsValid())
             {
                 return -125;
             }
@@ -165,10 +123,8 @@ namespace ClassicUO.Game.Map
 
             unsafe
             {
-                MapBlock* mp = (MapBlock*) blockIndex.MapAddress;
-                MapCells* cells = (MapCells*) &mp->Cells;
-
-                return cells[(my << 3) + mx].Z;
+                blockIndex.MapFile.Seek((long)blockIndex.MapAddress, System.IO.SeekOrigin.Begin);
+                return blockIndex.MapFile.Read<MapBlock>().Cells[(my << 3) + mx].Z;
             }
         }
 
@@ -228,12 +184,12 @@ namespace ClassicUO.Game.Map
                         continue;
                     }
 
-                    if (obj.Graphic >= TileDataLoader.Instance.StaticData.Length)
+                    if (obj.Graphic >= Client.Game.UO.FileManager.TileData.StaticData.Length)
                     {
                         continue;
                     }
 
-                    if (!TileDataLoader.Instance.StaticData[obj.Graphic].IsRoof || Math.Abs(z - obj.Z) > 6)
+                    if (!Client.Game.UO.FileManager.TileData.StaticData[obj.Graphic].IsRoof || Math.Abs(z - obj.Z) > 6)
                     {
                         continue;
                     }
@@ -267,8 +223,8 @@ namespace ClassicUO.Game.Map
         {
             int block = GetBlock(blockX, blockY);
             int map = Index;
-            MapLoader.Instance.SanitizeMapIndex(ref map);
-            IndexMap[] list = MapLoader.Instance.BlockData[map];
+            Client.Game.UO.FileManager.Maps.SanitizeMapIndex(ref map);
+            IndexMap[] list = Client.Game.UO.FileManager.Maps.BlockData[map];
 
             return ref block >= list.Length ? ref IndexMap.Invalid : ref list[block];
         }
@@ -276,7 +232,7 @@ namespace ClassicUO.Game.Map
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private int GetBlock(int blockX, int blockY)
         {
-            return blockX * MapLoader.Instance.MapBlocksSize[Index, 1] + blockY;
+            return blockX * Client.Game.UO.FileManager.Maps.MapBlocksSize[Index, 1] + blockY;
         }
 
         public IEnumerable<Chunk> GetUsedChunks()

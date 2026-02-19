@@ -1,46 +1,15 @@
-#region license
+// SPDX-License-Identifier: BSD-2-Clause
 
-// Copyright (c) 2024, andreakarasho
-// All rights reserved.
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. All advertising materials mentioning features or use of this software
-//    must display the following acknowledgement:
-//    This product includes software developed by andreakarasho - https://github.com/andreakarasho
-// 4. Neither the name of the copyright holder nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ''AS IS'' AND ANY
-// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY
-// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-#endregion
-
-using System;
+using ClassicUO.Assets;
 using ClassicUO.Configuration;
 using ClassicUO.Game.Data;
 using ClassicUO.Game.Managers;
 using ClassicUO.Game.UI.Gumps;
-using ClassicUO.Assets;
 using ClassicUO.Resources;
 using ClassicUO.Utility;
 using ClassicUO.Utility.Collections;
 using Microsoft.Xna.Framework;
-using ClassicUO.Game.Scenes;
+using System;
 
 namespace ClassicUO.Game.GameObjects
 {
@@ -412,7 +381,8 @@ namespace ClassicUO.Game.GameObjects
 
                 ushort graphic = GetGraphicForAnimation();
 
-                if (graphic >= Client.Game.UO.Animations.MaxAnimationCount)
+                var animations = Client.Game.UO.Animations;
+                if (graphic >= animations.MaxAnimationCount)
                 {
                     return;
                 }
@@ -427,8 +397,8 @@ namespace ClassicUO.Game.GameObjects
                 //    out var useUOP
                 //);
 
-                AnimationGroupsType type = Client.Game.UO.Animations.GetAnimType(graphic);
-                AnimationFlags  flags = Client.Game.UO.Animations.GetAnimFlags(graphic);
+                AnimationGroupsType type = animations.GetAnimType(graphic);
+                AnimationFlags  flags = animations.GetAnimFlags(graphic);
                 AnimationGroups animGroup = AnimationGroups.None;
 
                 bool isLowExtended = false;
@@ -508,8 +478,8 @@ namespace ClassicUO.Game.GameObjects
                 if (isLowExtended && _animationGroup == 18)
                 {
                     if (
-                        !Client.Game.UO.Animations.AnimationExists(graphic, 18)
-                        && Client.Game.UO.Animations.AnimationExists(graphic, 17)
+                        !animations.AnimationExists(graphic, 18)
+                        && animations.AnimationExists(graphic, 17)
                     )
                     {
                         _animationGroup = GetReplacedObjectAnimation(graphic, 17);
@@ -520,7 +490,7 @@ namespace ClassicUO.Game.GameObjects
                     }
                 }
 
-                if (!Client.Game.UO.Animations.AnimationExists(graphic, _animationGroup))
+                if (!animations.AnimationExists(graphic, _animationGroup))
                 {
                     if (first_value == 0)
                     {
@@ -533,7 +503,7 @@ namespace ClassicUO.Game.GameObjects
 
                     _animationGroup = _animationIdle[(byte)animGroup - 1, first_value];
 
-                    if (!Client.Game.UO.Animations.AnimationExists(graphic, _animationGroup))
+                    if (!animations.AnimationExists(graphic, _animationGroup))
                     {
                         SetAnimation(original_value);
                     }
@@ -596,120 +566,124 @@ namespace ClassicUO.Game.GameObjects
             ProcessSteps(out var dir, evalutate);
             ProcessFootstepsSound();
 
-            if (LastAnimationChangeTime < Time.Ticks && !NoIterateAnimIndex())
+            if (LastAnimationChangeTime >= Time.Ticks || NoIterateAnimIndex())
             {
-                ushort id = GetGraphicForAnimation();
-                byte action = GetGroupForAnimation(this, id, true);
+                return;
+            }
 
-                bool mirror = false;
-                AnimationsLoader.Instance.GetAnimDirection(ref dir, ref mirror);
-                int currentDelay = Constants.CHARACTER_ANIMATION_DELAY;
+            var animations = Client.Game.UO.Animations;
 
-                if (id < Client.Game.UO.Animations.MaxAnimationCount && dir < 5)
+            ushort id = GetGraphicForAnimation();
+            byte action = GetGroupForAnimation(this, id, true);
+
+            bool mirror = false;
+            animations.GetAnimDirection(ref dir, ref mirror);
+            int currentDelay = Constants.CHARACTER_ANIMATION_DELAY;
+
+            if (id < animations.MaxAnimationCount && dir < 5)
+            {
+                var frames = animations.GetAnimationFrames(
+                    id,
+                    action,
+                    dir,
+                    out _,
+                    out _
+                );
+
+                if (frames.Length != 0)
                 {
-                    var frames = Client.Game.UO.Animations.GetAnimationFrames(
-                        id,
-                        action,
-                        dir,
-                        out _,
-                        out _
-                    );
+                    int fc = frames.Length;
 
-                    if (frames.Length != 0)
+                    int frameIndex =
+                        AnimIndex
+                        + (AnimationFromServer && !_isAnimationForwardDirection ? -1 : 1);
+
+                    if (AnimationFromServer)
                     {
-                        int fc = frames.Length;
+                        currentDelay += currentDelay * (_animationInterval + 1);
 
-                        int frameIndex =
-                            AnimIndex
-                            + (AnimationFromServer && !_isAnimationForwardDirection ? -1 : 1);
-
-                        if (AnimationFromServer)
+                        if (AnimationFrameCount == 0)
                         {
-                            currentDelay += currentDelay * (_animationInterval + 1);
-
-                            if (AnimationFrameCount == 0)
-                            {
-                                AnimationFrameCount = (byte)fc;
-                            }
-                            else
-                            {
-                                fc = AnimationFrameCount;
-                            }
-
-                            if (_isAnimationForwardDirection && frameIndex >= fc)
-                            {
-                                frameIndex = 0;
-                            }
-                            else if (!_isAnimationForwardDirection && frameIndex < 0)
-                            {
-                                if (fc == 0)
-                                {
-                                    frameIndex = 0;
-                                }
-                                else
-                                {
-                                    frameIndex = (byte)(frames.Length - 1);
-                                }
-                            }
-                            else
-                            {
-                                goto SKIP;
-                            }
-
-                            if (_animationRepeateMode == 0) // play animation infinite time
-                            {
-                                goto SKIP;
-                            }
-
-                            if (--_animationRepeateMode > 0) // play animation n times
-                            {
-                                goto SKIP;
-                            }
-
-                            if (_animationRepeat)
-                            {
-                                _animationRepeatModeCount = _animationRepeateMode;
-
-                                _animationRepeat = false;
-                            }
-                            else
-                            {
-                                SetAnimation(0xFF);
-                            }
-
-                            SKIP:
-                            ;
+                            AnimationFrameCount = (byte)fc;
                         }
                         else
                         {
-                            if (frameIndex >= fc)
-                            {
-                                frameIndex = 0;
-
-                                if ((Serial & 0x80000000) != 0)
-                                {
-                                    World.CorpseManager.Remove(0, Serial);
-                                    World.RemoveMobile(Serial);
-                                }
-                            }
+                            fc = AnimationFrameCount;
                         }
 
-                        AnimIndex = (byte)(frameIndex % frames.Length);
+                        if (_isAnimationForwardDirection && frameIndex >= fc)
+                        {
+                            frameIndex = 0;
+                        }
+                        else if (!_isAnimationForwardDirection && frameIndex < 0)
+                        {
+                            if (fc == 0)
+                            {
+                                frameIndex = 0;
+                            }
+                            else
+                            {
+                                frameIndex = (byte)(frames.Length - 1);
+                            }
+                        }
+                        else
+                        {
+                            goto SKIP;
+                        }
+
+                        if (_animationRepeateMode == 0) // play animation infinite time
+                        {
+                            goto SKIP;
+                        }
+
+                        if (--_animationRepeateMode > 0) // play animation n times
+                        {
+                            goto SKIP;
+                        }
+
+                        if (_animationRepeat)
+                        {
+                            _animationRepeatModeCount = _animationRepeateMode;
+
+                            _animationRepeat = false;
+                        }
+                        else
+                        {
+                            SetAnimation(0xFF);
+                        }
+
+                    SKIP:
+                        ;
                     }
-                    else if ((Serial & 0x80000000) != 0)
+                    else
                     {
-                        World.CorpseManager.Remove(0, Serial);
-                        World.RemoveMobile(Serial);
+                        if (frameIndex >= fc)
+                        {
+                            frameIndex = 0;
+
+                            if ((Serial & 0x80000000) != 0)
+                            {
+                                World.CorpseManager.Remove(0, Serial);
+                                World.RemoveMobile(Serial);
+                            }
+                        }
                     }
+
+                    AnimIndex = (byte)(frameIndex % frames.Length);
                 }
                 else if ((Serial & 0x80000000) != 0)
                 {
                     World.CorpseManager.Remove(0, Serial);
                     World.RemoveMobile(Serial);
                 }
-
-                LastAnimationChangeTime = Time.Ticks + currentDelay;
             }
+            else if ((Serial & 0x80000000) != 0)
+            {
+                World.CorpseManager.Remove(0, Serial);
+                World.RemoveMobile(Serial);
+            }
+
+            LastAnimationChangeTime = Time.Ticks + currentDelay;
         }
 
         public void ProcessSteps(out byte dir, bool evalutate = false)
@@ -983,7 +957,7 @@ namespace ClassicUO.Game.GameObjects
 
             p.X += (int)Offset.X + 22;
             p.Y += (int)(Offset.Y - Offset.Z - (height + centerY + 8));
-            p = Client.Game.Scene.Camera.WorldToScreen(p);
+            p = Client.Game.Scene.Camera.WorldToScreen(p, true);
 
             if (ObjectHandlesStatus == ObjectHandlesStatus.DISPLAYING)
             {

@@ -1,47 +1,18 @@
-﻿#region license
+﻿// SPDX-License-Identifier: BSD-2-Clause
 
-// Copyright (c) 2024, andreakarasho
-// All rights reserved.
-// 
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. All advertising materials mentioning features or use of this software
-//    must display the following acknowledgement:
-//    This product includes software developed by andreakarasho - https://github.com/andreakarasho
-// 4. Neither the name of the copyright holder nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-// 
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ''AS IS'' AND ANY
-// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY
-// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-#endregion
-
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using ClassicUO.Game.Managers;
-using ClassicUO.Input;
 using ClassicUO.Assets;
+using ClassicUO.Game.Managers;
+using ClassicUO.Game.Scenes;
+using ClassicUO.Input;
 using ClassicUO.Renderer;
 using ClassicUO.Utility;
 using ClassicUO.Utility.Logging;
 using Microsoft.Xna.Framework;
-using SDL2;
+using SDL3;
 using StbTextEditSharp;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace ClassicUO.Game.UI.Controls
 {
@@ -52,6 +23,19 @@ namespace ClassicUO.Game.UI.Controls
 
         private readonly int _maxCharCount = -1;
 
+        public class BeforeTextChangedEventArgs : EventArgs
+        {
+            public BeforeTextChangedEventArgs(string previousText, string newText, int newCaretIndex)
+            {
+                PreviousText = previousText;
+                NewText = newText;
+                NewCaretIndex = newCaretIndex;
+
+            }
+            public string PreviousText { get; }
+            public string NewText { get; set; }
+            public int NewCaretIndex { get; set; }
+        }
 
         public StbTextBox
         (
@@ -163,6 +147,7 @@ namespace ClassicUO.Game.UI.Controls
 
         public bool AllowTAB { get; set; }
         public bool NoSelection { get; set; }
+        public bool PassEnterToParent { get; set; }
 
         public int CaretIndex
         {
@@ -260,14 +245,16 @@ namespace ClassicUO.Game.UI.Controls
                         value = value.Substring(0, _maxCharCount);
                     }
                 }
-                
+
                 //Sanitize(ref value);
+
+                string previousText = _rendererText.Text;
 
                 _rendererText.Text = value;
 
                 if (!_is_writing)
                 {
-                    OnTextChanged();
+                    OnTextChanged(previousText);
                 }
             }
         }
@@ -299,13 +286,14 @@ namespace ClassicUO.Game.UI.Controls
         protected bool _leftWasDown, _fromServer;
         protected RenderedText _rendererText, _rendererCaret;
 
+        public event EventHandler<BeforeTextChangedEventArgs> BeforeTextChanged;
         public event EventHandler TextChanged;
 
         public MultilinesFontInfo CalculateFontInfo(string text, bool countret = true)
         {
             if (IsUnicode)
             {
-                return FontsLoader.Instance.GetInfoUnicode
+                return Client.Game.UO.FileManager.Fonts.GetInfoUnicode
                 (
                     _rendererText.Font,
                     text,
@@ -317,7 +305,7 @@ namespace ClassicUO.Game.UI.Controls
                 );
             }
 
-            return FontsLoader.Instance.GetInfoASCII
+            return Client.Game.UO.FileManager.Fonts.GetInfoASCII
             (
                 _rendererText.Font,
                 text,
@@ -375,7 +363,7 @@ namespace ClassicUO.Game.UI.Controls
                 }
 
 
-                int realWidth = _rendererText.IsUnicode ? FontsLoader.Instance.GetWidthUnicode(_rendererText.Font, text) : FontsLoader.Instance.GetWidthASCII(_rendererText.Font, text);
+                int realWidth = _rendererText.IsUnicode ? Client.Game.UO.FileManager.Fonts.GetWidthUnicode(_rendererText.Font, text) : Client.Game.UO.FileManager.Fonts.GetWidthASCII(_rendererText.Font, text);
 
                 if (realWidth > _rendererText.MaxWidth)
                 {
@@ -388,7 +376,7 @@ namespace ClassicUO.Game.UI.Controls
                     }
 
                     //MultilinesFontInfo info = _rendererText.IsUnicode
-                    //                              ? FontsLoader.Instance.GetInfoUnicode(
+                    //                              ? Client.Game.UO.FileManager.Fonts.GetInfoUnicode(
                     //                                                                    _rendererText.Font,
                     //                                                                    text,
                     //                                                                    text.Length,
@@ -396,7 +384,7 @@ namespace ClassicUO.Game.UI.Controls
                     //                                                                    (ushort) _rendererText.FontStyle,
                     //                                                                    realWidth
                     //                                                                   )
-                    //                              : FontsLoader.Instance.GetInfoASCII(
+                    //                              : Client.Game.UO.FileManager.Fonts.GetInfoASCII(
                     //                                                                  _rendererText.Font,
                     //                                                                  text,
                     //                                                                  text.Length,
@@ -459,8 +447,19 @@ namespace ClassicUO.Game.UI.Controls
         }
 
 
-        protected virtual void OnTextChanged()
+        protected virtual void OnTextChanged(string previousText)
         {
+            BeforeTextChangedEventArgs preProcessorArgs = new BeforeTextChangedEventArgs(previousText, Text, Stb.CursorIndex);
+            BeforeTextChanged?.Invoke(this, preProcessorArgs);
+
+            if (preProcessorArgs.NewText != Text)
+            {
+                // Do not set the property "this.Text", since we don't need to do another round of OnTextChanged
+                _rendererText.Text = preProcessorArgs.NewText;
+            }
+
+            Stb.CursorIndex = preProcessorArgs.NewCaretIndex;
+
             TextChanged?.Raise(this);
 
             UpdateCaretScreenPosition();
@@ -507,7 +506,7 @@ namespace ClassicUO.Game.UI.Controls
 
                     break;
 
-                case SDL.SDL_Keycode.SDLK_a when Keyboard.Ctrl && !NoSelection:
+                case SDL.SDL_Keycode.SDLK_A when Keyboard.Ctrl && !NoSelection:
                     SelectAll();
 
                     break;
@@ -523,7 +522,7 @@ namespace ClassicUO.Game.UI.Controls
 
                     break;
 
-                case SDL.SDL_Keycode.SDLK_c when Keyboard.Ctrl && !NoSelection:
+                case SDL.SDL_Keycode.SDLK_C when Keyboard.Ctrl && !NoSelection:
                     int selectStart = Math.Min(Stb.SelectStart, Stb.SelectEnd);
                     int selectEnd = Math.Max(Stb.SelectStart, Stb.SelectEnd);
 
@@ -534,7 +533,7 @@ namespace ClassicUO.Game.UI.Controls
 
                     break;
 
-                case SDL.SDL_Keycode.SDLK_x when Keyboard.Ctrl && !NoSelection:
+                case SDL.SDL_Keycode.SDLK_X when Keyboard.Ctrl && !NoSelection:
                     selectStart = Math.Min(Stb.SelectStart, Stb.SelectEnd);
                     selectEnd = Math.Max(Stb.SelectStart, Stb.SelectEnd);
 
@@ -550,17 +549,17 @@ namespace ClassicUO.Game.UI.Controls
 
                     break;
 
-                case SDL.SDL_Keycode.SDLK_v when Keyboard.Ctrl && IsEditable:
+                case SDL.SDL_Keycode.SDLK_V when Keyboard.Ctrl && IsEditable:
                     OnTextInput(StringHelper.GetClipboardText(Multiline));
 
                     break;
 
-                case SDL.SDL_Keycode.SDLK_z when Keyboard.Ctrl && IsEditable:
+                case SDL.SDL_Keycode.SDLK_Z when Keyboard.Ctrl && IsEditable:
                     stb_key = ControlKeys.Undo;
 
                     break;
 
-                case SDL.SDL_Keycode.SDLK_y when Keyboard.Ctrl && IsEditable:
+                case SDL.SDL_Keycode.SDLK_Y when Keyboard.Ctrl && IsEditable:
                     stb_key = ControlKeys.Redo;
 
                     break;
@@ -705,7 +704,7 @@ namespace ClassicUO.Game.UI.Controls
                 case SDL.SDL_Keycode.SDLK_RETURN:
                     if (IsEditable)
                     {
-                        if (Multiline)
+                        if (Multiline && !PassEnterToParent)
                         {
                             if (!_fromServer && !IsMaxCharReached(0))
                             {
@@ -755,6 +754,7 @@ namespace ClassicUO.Game.UI.Controls
             }
             else
             {
+                string previousText = Text;
                 if (_maxCharCount > 0)
                 {
                     if (NumbersOnly)
@@ -774,7 +774,7 @@ namespace ClassicUO.Game.UI.Controls
 
                 if (!_is_writing)
                 {
-                    OnTextChanged();
+                    OnTextChanged(previousText);
                 }
             }
         }
@@ -783,13 +783,15 @@ namespace ClassicUO.Game.UI.Controls
         {
             if (Length != 0)
             {
+                string previousText = Text;
+                
                 SelectionStart = 0;
                 SelectionEnd = 0;
                 Stb.Delete(0, Length);
 
                 if (!_is_writing)
                 {
-                    OnTextChanged();
+                    OnTextChanged(previousText);
                 }
             }
         }
@@ -806,6 +808,8 @@ namespace ClassicUO.Game.UI.Controls
             {
                 return;
             }
+
+            string previousText = Text;
 
             _is_writing = true;
 
@@ -853,50 +857,59 @@ namespace ClassicUO.Game.UI.Controls
                         }
                     }
 
-                    if (_maxCharCount > 0 && int.TryParse(Stb.text + c, out int val))
-                    {
-                        if (val > _maxCharCount)
-                        {
-                            _is_writing = false;
-                            SetText(_maxCharCount.ToString());
-
-                            return;
-                        }
-                    }
+                    // if (int.TryParse(Stb.text + c, out int val))
+                    // {
+                    //     if (val > _maxCharCount)
+                    //     {
+                    //         _is_writing = false;
+                    //         SetText(_maxCharCount.ToString());
+                    //
+                    //         return;
+                    //     }
+                    // }
                 }
 
 
                 if (count > 1)
                 {
                     Stb.Paste(c);
-                    OnTextChanged();
+                    OnTextChanged(previousText);
                 }
                 else if (_rendererText.GetCharWidth(c[0]) > 0 || c[0] == '\n')
                 {
                     Stb.InputChar(c[0]);
-                    OnTextChanged();
+                    OnTextChanged(previousText);
                 }
             }
 
             _is_writing = false;
         }
 
-        public override bool Draw(UltimaBatcher2D batcher, int x, int y)
+        public override bool AddToRenderLists(RenderLists renderLists, int x, int y, ref float layerDepthRef)
         {
-            if (batcher.ClipBegin(x, y, Width, Height))
-            {
-                base.Draw(batcher, x, y);
-                DrawSelection(batcher, x, y);
-                _rendererText.Draw(batcher, x, y);
-                DrawCaret(batcher, x, y);
+            float layerDepth = layerDepthRef;
+            renderLists.AddGumpNoAtlas(
+                batcher =>
+                {
+                    if (batcher.ClipBegin(x, y, Width, Height))
+                    {
+                        RenderLists childRenderLists = new();
+                        base.AddToRenderLists(childRenderLists, x, y, ref layerDepth);
+                        childRenderLists.DrawRenderLists(batcher, sbyte.MaxValue);
+                        DrawSelection(batcher, x, y, layerDepth);
+                        _rendererText.Draw(batcher, x, y, layerDepth);
+                        DrawCaret(batcher, x, y, layerDepth);
 
-                batcher.ClipEnd();
-            }
-            
+                        batcher.ClipEnd();
+                    }
+                    return true;
+                }
+            );
+
             return true;
         }
 
-        private protected void DrawSelection(UltimaBatcher2D batcher, int x, int y)
+        private protected void DrawSelection(UltimaBatcher2D batcher, int x, int y, float layerDepth)
         {
             if (!AllowSelection)
             {
@@ -938,7 +951,7 @@ namespace ClassicUO.Game.UI.Controls
 
                             int endX = 0;
 
-                            // calculate width 
+                            // calculate width
                             for (int k = 0; k < count; k++)
                             {
                                 endX += _rendererText.GetCharWidth(info.Data[startSelectionIndex + k].Item);
@@ -954,7 +967,8 @@ namespace ClassicUO.Game.UI.Controls
                                     endX,
                                     info.MaxHeight + 1
                                 ),
-                                hueVector
+                                hueVector,
+                                layerDepth
                             );
 
                             break;
@@ -972,7 +986,8 @@ namespace ClassicUO.Game.UI.Controls
                                 info.Width - drawX,
                                 info.MaxHeight + 1
                             ),
-                            hueVector
+                            hueVector,
+                            layerDepth
                         );
 
                         // first selection is gone. M
@@ -986,11 +1001,11 @@ namespace ClassicUO.Game.UI.Controls
             }
         }
 
-        protected virtual void DrawCaret(UltimaBatcher2D batcher, int x, int y)
+        protected virtual void DrawCaret(UltimaBatcher2D batcher, int x, int y, float layerDepth)
         {
             if (HasKeyboardFocus)
             {
-                _rendererCaret.Draw(batcher, x + _caretScreenPosition.X, y + _caretScreenPosition.Y);
+                _rendererCaret.Draw(batcher, x + _caretScreenPosition.X, y + _caretScreenPosition.Y, layerDepth);
             }
         }
 

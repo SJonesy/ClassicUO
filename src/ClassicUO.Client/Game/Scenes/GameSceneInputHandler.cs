@@ -1,34 +1,4 @@
-#region license
-
-// Copyright (c) 2024, andreakarasho
-// All rights reserved.
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. All advertising materials mentioning features or use of this software
-//    must display the following acknowledgement:
-//    This product includes software developed by andreakarasho - https://github.com/andreakarasho
-// 4. Neither the name of the copyright holder nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ''AS IS'' AND ANY
-// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY
-// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-#endregion
+// SPDX-License-Identifier: BSD-2-Clause
 
 using System;
 using System.Linq;
@@ -43,7 +13,7 @@ using ClassicUO.Network;
 using ClassicUO.Resources;
 using ClassicUO.Utility;
 using Microsoft.Xna.Framework;
-using SDL2;
+using SDL3;
 using MathHelper = ClassicUO.Utility.MathHelper;
 
 namespace ClassicUO.Game.Scenes
@@ -204,9 +174,11 @@ namespace ClassicUO.Game.Scenes
             foreach (Mobile mobile in _world.Mobiles.Values)
             {
                 if (ProfileManager.CurrentProfile.DragSelectHumanoidsOnly && !mobile.IsHuman)
-                {
                     continue;
-                }
+
+                // Skip if is Renamable (follower), or non-hostile notoriety
+                if (ProfileManager.CurrentProfile.DragSelectHostileOnly && (mobile.IsRenamable || mobile.NotorietyFlag is NotorietyFlag.Ally or NotorietyFlag.Innocent or NotorietyFlag.Invulnerable))
+                    continue;
 
                 Point p = mobile.RealScreenPosition;
 
@@ -529,7 +501,7 @@ namespace ClassicUO.Game.Scenes
                         if (gobj is Land land) { }
                         else
                         {
-                            ref StaticTiles itemData = ref TileDataLoader.Instance.StaticData[
+                            ref StaticTiles itemData = ref Client.Game.UO.FileManager.TileData.StaticData[
                                 gobj.Graphic
                             ];
 
@@ -573,8 +545,8 @@ namespace ClassicUO.Game.Scenes
                     case CursorTarget.Position:
                     case CursorTarget.Object:
                     case CursorTarget.MultiPlacement when _world.CustomHouseManager == null:
-
-                        {
+                    case CursorTarget.CallbackTarget:
+                    {
                             BaseGameObject obj = lastObj;
 
                             if (obj is TextObject ov)
@@ -682,7 +654,7 @@ namespace ClassicUO.Game.Scenes
 
                         if (string.IsNullOrEmpty(name))
                         {
-                            name = ClilocLoader.Instance.GetString(
+                            name = Client.Game.UO.FileManager.Clilocs.GetString(
                                 1020000 + st.Graphic,
                                 st.ItemData.Name
                             );
@@ -712,7 +684,7 @@ namespace ClassicUO.Game.Scenes
 
                         if (string.IsNullOrEmpty(name))
                         {
-                            name = ClilocLoader.Instance.GetString(
+                            name = Client.Game.UO.FileManager.Clilocs.GetString(
                                 1020000 + multi.Graphic,
                                 multi.ItemData.Name
                             );
@@ -898,11 +870,9 @@ namespace ClassicUO.Game.Scenes
                 {
                     if (obj is Static || obj is Multi || obj is Item)
                     {
-                        ref StaticTiles itemdata = ref TileDataLoader.Instance.StaticData[
-                            obj.Graphic
-                        ];
-
-                        if (itemdata.IsSurface && _world.Player.Pathfinder.WalkTo(obj.X, obj.Y, obj.Z, 0))
+                        // previously we only triggered the pathfinder if the target was a surface
+                        // now we trigger it always and the pathfinder decides if the target is blocked and then only walks next to it
+                        if (_world.Player.Pathfinder.WalkTo(obj.X, obj.Y, obj.Z, 0))
                         {
                             _world.Player.AddMessage(
                                 MessageType.Label,
@@ -1103,7 +1073,7 @@ namespace ClassicUO.Game.Scenes
                             );
                             customgump?.Dispose();
 
-                            if (obj == _world.Player)
+                            if (obj == _world.Player && ProfileManager.CurrentProfile.StatusGumpBarMutuallyExclusive)
                             {
                                 StatusGumpBase.GetStatusGump()?.Dispose();
                             }
@@ -1156,12 +1126,14 @@ namespace ClassicUO.Game.Scenes
 
         internal override void OnKeyDown(SDL.SDL_KeyboardEvent e)
         {
-            if (e.keysym.sym == SDL.SDL_Keycode.SDLK_TAB && e.repeat != 0)
+            SDL.SDL_Keycode keycode = (SDL.SDL_Keycode)e.key;
+
+            if (keycode == SDL.SDL_Keycode.SDLK_TAB && e.repeat)
             {
                 return;
             }
 
-            if (e.keysym.sym == SDL.SDL_Keycode.SDLK_ESCAPE && _world.TargetManager.IsTargeting)
+            if (keycode == SDL.SDL_Keycode.SDLK_ESCAPE && _world.TargetManager.IsTargeting)
             {
                 _world.TargetManager.CancelTarget();
             }
@@ -1171,7 +1143,7 @@ namespace ClassicUO.Game.Scenes
                 return;
             }
 
-            switch (e.keysym.sym)
+            switch (keycode)
             {
                 case SDL.SDL_Keycode.SDLK_ESCAPE:
 
@@ -1236,7 +1208,7 @@ namespace ClassicUO.Game.Scenes
                         {
                             UIManager.SystemChat.IsActive = true;
                         }
-                        else if (Keyboard.Shift && e.keysym.sym == SDL.SDL_Keycode.SDLK_SEMICOLON)
+                        else if (Keyboard.Shift && keycode == SDL.SDL_Keycode.SDLK_SEMICOLON)
                         {
                             UIManager.SystemChat.IsActive = true;
                         }
@@ -1251,19 +1223,20 @@ namespace ClassicUO.Game.Scenes
                     {
                         if (ProfileManager.CurrentProfile.ActivateChatAfterEnter)
                         {
-                            UIManager.SystemChat.Mode = ChatMode.Default;
-
-                            if (
-                                !(
-                                    Keyboard.Shift
-                                    && ProfileManager.CurrentProfile.ActivateChatShiftEnterSupport
-                                )
-                            )
+                            if (UIManager.SystemChat.IsActive && Keyboard.Shift && ProfileManager.CurrentProfile.ActivateChatShiftEnterSupport)
                             {
-                                UIManager.SystemChat.ToggleChatVisibility();
+                                // Shift+Enter keeps the chat the way it is
+                                return;
                             }
-                        }
 
+                            if (UIManager.SystemChat.IsComposing)
+                            {
+                                // still text left to be sent, do nothing
+                                return;
+                            }
+                            UIManager.SystemChat.ToggleChatVisibility();
+                        }
+                        // everything else is handled in the system chat control
                         return;
                     }
 
@@ -1282,13 +1255,13 @@ namespace ClassicUO.Game.Scenes
             if (CanExecuteMacro())
             {
                 Macro macro = _world.Macros.FindMacro(
-                    e.keysym.sym,
+                    keycode,
                     Keyboard.Alt,
                     Keyboard.Ctrl,
                     Keyboard.Shift
                 );
 
-                if (macro != null && e.keysym.sym != SDL.SDL_Keycode.SDLK_UNKNOWN)
+                if (macro != null && keycode != SDL.SDL_Keycode.SDLK_UNKNOWN)
                 {
                     if (macro.Items is MacroObject mac)
                     {
@@ -1362,7 +1335,7 @@ namespace ClassicUO.Game.Scenes
                 {
                     if (string.IsNullOrEmpty(UIManager.SystemChat.TextBoxControl.Text))
                     {
-                        switch (e.keysym.sym)
+                        switch (keycode)
                         {
                             case SDL.SDL_Keycode.SDLK_UP:
                                 _flags[0] = true;
@@ -1405,16 +1378,18 @@ namespace ClassicUO.Game.Scenes
                 Camera.Zoom = ProfileManager.CurrentProfile.DefaultScale;
             }
 
+            SDL.SDL_Keycode keycode = (SDL.SDL_Keycode)e.key;
+
             if (_flags[4] || Client.Game.Scene.Camera.PeekingToMouse)
             {
                 Macro macro = _world.Macros.FindMacro(
-                    e.keysym.sym,
+                    keycode,
                     Keyboard.Alt,
                     Keyboard.Ctrl,
                     Keyboard.Shift
                 );
 
-                if (macro != null && e.keysym.sym != SDL.SDL_Keycode.SDLK_UNKNOWN)
+                if (macro != null && keycode != SDL.SDL_Keycode.SDLK_UNKNOWN)
                 {
                     if (macro.Items is MacroObject mac)
                     {
@@ -1495,7 +1470,7 @@ namespace ClassicUO.Game.Scenes
                 }
             }
 
-            switch (e.keysym.sym)
+            switch (keycode)
             {
                 case SDL.SDL_Keycode.SDLK_UP:
                     _flags[0] = false;
@@ -1519,7 +1494,7 @@ namespace ClassicUO.Game.Scenes
             }
 
             if (
-                e.keysym.sym == SDL.SDL_Keycode.SDLK_TAB
+                keycode == SDL.SDL_Keycode.SDLK_TAB
                 && !ProfileManager.CurrentProfile.DisableTabBtn
             )
             {

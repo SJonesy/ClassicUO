@@ -1,34 +1,4 @@
-﻿#region license
-
-// Copyright (c) 2024, andreakarasho
-// All rights reserved.
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. All advertising materials mentioning features or use of this software
-//    must display the following acknowledgement:
-//    This product includes software developed by andreakarasho - https://github.com/andreakarasho
-// 4. Neither the name of the copyright holder nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ''AS IS'' AND ANY
-// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY
-// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-#endregion
+﻿// SPDX-License-Identifier: BSD-2-Clause
 
 using System.Collections.Generic;
 using System.IO;
@@ -40,6 +10,7 @@ using ClassicUO.Assets;
 using ClassicUO.Renderer;
 using ClassicUO.Utility;
 using Microsoft.Xna.Framework;
+using System;
 
 namespace ClassicUO.Game.Managers
 {
@@ -101,7 +72,7 @@ namespace ClassicUO.Game.Managers
                                 break;
 
                             case 1:
-                                X = Client.Game.Window.ClientBounds.Width - width;
+                                X = Client.Game.ClientBounds.Width - width;
                                 Y = 0;
 
                                 break;
@@ -122,12 +93,12 @@ namespace ClassicUO.Game.Managers
                                 break;
                         }
 
-                        if (X + width > Client.Game.Window.ClientBounds.Width)
+                        if (X + width > Client.Game.ClientBounds.Width)
                         {
                             X -= width;
                         }
 
-                        if (Y + height > Client.Game.Window.ClientBounds.Height)
+                        if (Y + height > Client.Game.ClientBounds.Height)
                         {
                             Y -= height;
                         }
@@ -140,14 +111,14 @@ namespace ClassicUO.Game.Managers
                         {
                             if (
                                 X + width + Constants.CONTAINER_RECT_STEP
-                                > Client.Game.Window.ClientBounds.Width
+                                > Client.Game.ClientBounds.Width
                             )
                             {
                                 X = Constants.CONTAINER_RECT_DEFAULT_POSITION;
 
                                 if (
                                     Y + height + Constants.CONTAINER_RECT_LINESTEP
-                                    > Client.Game.Window.ClientBounds.Height
+                                    > Client.Game.ClientBounds.Height
                                 )
                                 {
                                     Y = Constants.CONTAINER_RECT_DEFAULT_POSITION;
@@ -159,12 +130,12 @@ namespace ClassicUO.Game.Managers
                             }
                             else if (
                                 Y + height + Constants.CONTAINER_RECT_STEP
-                                > Client.Game.Window.ClientBounds.Height
+                                > Client.Game.ClientBounds.Height
                             )
                             {
                                 if (
                                     X + width + Constants.CONTAINER_RECT_LINESTEP
-                                    > Client.Game.Window.ClientBounds.Width
+                                    > Client.Game.ClientBounds.Width
                                 )
                                 {
                                     X = Constants.CONTAINER_RECT_DEFAULT_POSITION;
@@ -298,6 +269,8 @@ namespace ClassicUO.Game.Managers
                 new[] { '"', '"' }
             );
 
+            int line = 0;
+
             while (!containersParser.IsEOF())
             {
                 List<string> ss = containersParser.ReadTokens();
@@ -305,7 +278,8 @@ namespace ClassicUO.Game.Managers
                 if (ss != null && ss.Count != 0)
                 {
                     if (
-                        ushort.TryParse(ss[0], out ushort graphic)
+                        ss.Count >= 7
+                        && ushort.TryParse(ss[0], out ushort graphic)
                         && ushort.TryParse(ss[1], out ushort open_sound_id)
                         && ushort.TryParse(ss[2], out ushort close_sound_id)
                         && int.TryParse(ss[3], out int x)
@@ -341,8 +315,13 @@ namespace ClassicUO.Game.Managers
                             minimizer_x,
                             minimizer_y
                         );
+                    } else
+                    {
+                        Console.WriteLine($"Error parsing container data at line {line}");
                     }
                 }
+
+                line++;
             }
         }
 

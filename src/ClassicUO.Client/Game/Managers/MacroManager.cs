@@ -1,34 +1,4 @@
-#region license
-
-// Copyright (c) 2024, andreakarasho
-// All rights reserved.
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. All advertising materials mentioning features or use of this software
-//    must display the following acknowledgement:
-//    This product includes software developed by andreakarasho - https://github.com/andreakarasho
-// 4. Neither the name of the copyright holder nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ''AS IS'' AND ANY
-// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY
-// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-#endregion
+// SPDX-License-Identifier: BSD-2-Clause
 
 using System;
 using System.Collections.Generic;
@@ -46,7 +16,7 @@ using ClassicUO.Network;
 using ClassicUO.Resources;
 using ClassicUO.Utility;
 using ClassicUO.Utility.Logging;
-using SDL2;
+using SDL3;
 
 namespace ClassicUO.Game.Managers
 {
@@ -632,8 +602,8 @@ namespace ClassicUO.Game.Managers
 
                                     if (party == null)
                                     {
-                                        int x = Client.Game.Window.ClientBounds.Width / 2 - 272;
-                                        int y = Client.Game.Window.ClientBounds.Height / 2 - 240;
+                                        int x = Client.Game.ClientBounds.Width / 2 - 272;
+                                        int y = Client.Game.ClientBounds.Height / 2 - 240;
                                         UIManager.Add(new PartyGump(_world, x, y, _world.Party.CanLoot));
                                     }
                                     else
@@ -729,7 +699,8 @@ namespace ClassicUO.Game.Managers
                                     {
                                         if (status != null)
                                         {
-                                            status.Dispose();
+                                            if (ProfileManager.CurrentProfile.StatusGumpBarMutuallyExclusive)
+                                                status.Dispose();
 
                                             if (ProfileManager.CurrentProfile.CustomBarsToggled)
                                             {
@@ -765,6 +736,15 @@ namespace ClassicUO.Game.Managers
                                     break;
 
                                 case MacroSubType.Journal:
+                                    if(ProfileManager.CurrentProfile.UseAlternateJournal)
+                                    {
+                                        ResizableJournal rjournal = UIManager.GetGump<ResizableJournal>();
+                                        if (macro.Code == MacroType.Close)
+                                        {
+                                            rjournal?.Dispose();
+                                        }
+                                        break;
+                                    }
 
                                     JournalGump journal = UIManager.GetGump<JournalGump>();
 
@@ -1562,7 +1542,7 @@ namespace ClassicUO.Game.Managers
                     switch (macro.SubCode)
                     {
                         case MacroSubType.BestHealPotion:
-                            Span<int> healpotion_clilocs = stackalloc int[3] { 1041330, 1041329, 1041329 };
+                            Span<int> healpotion_clilocs = stackalloc int[3] { 1041330, 1041329, 1041328 };
 
                             obj = _world.Player.FindPreferredItemByCliloc(healpotion_clilocs);
 
@@ -1798,6 +1778,18 @@ namespace ClassicUO.Game.Managers
                 case MacroType.LookAtMouse:
                     // handle in gamesceneinput
                     break;
+
+                case MacroType.UseCounterBarSlot:
+                    {
+                        MacroObjectString objectString = (MacroObjectString)macro;
+                        string slotString = objectString.Text;
+
+                        if (UIManager.GetGump<CounterBarGump>() is { } bar)
+                        {
+                            bar.UseSlot(slotString);
+                        }
+                        break;
+                    }
             }
 
 
@@ -1816,6 +1808,7 @@ namespace ClassicUO.Game.Managers
                     {
                         GameActions.MessageOverhead(_world, string.Format(ResGeneral.Target0, ent.Name), Notoriety.GetHue(((Mobile) ent).NotorietyFlag), _world.Player);
 
+                        _world.TargetManager.NewTargetSystemSerial = serial;
                         _world.TargetManager.SelectedTarget = serial;
                         _world.TargetManager.LastTargetInfo.SetEntity(serial);
 
@@ -2052,6 +2045,7 @@ namespace ClassicUO.Game.Managers
                 case MacroType.SetUpdateRange:
                 case MacroType.ModifyUpdateRange:
                 case MacroType.RazorMacro:
+                case MacroType.UseCounterBarSlot:
                     obj = new MacroObjectString(code, MacroSubType.MSC_NONE);
 
                     break;
@@ -2226,6 +2220,7 @@ namespace ClassicUO.Game.Managers
                 case MacroType.SetUpdateRange:
                 case MacroType.ModifyUpdateRange:
                 case MacroType.RazorMacro:
+                case MacroType.UseCounterBarSlot:
                     SubMenuType = 2;
 
                     break;
@@ -2342,7 +2337,8 @@ namespace ClassicUO.Game.Managers
         CloseInactiveHealthBars,
         CloseCorpses,
         UseObject,
-        LookAtMouse
+        LookAtMouse,
+        UseCounterBarSlot
     }
 
     internal enum MacroSubType

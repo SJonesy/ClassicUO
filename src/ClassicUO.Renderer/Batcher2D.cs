@@ -1,34 +1,4 @@
-﻿#region license
-
-// Copyright (c) 2024, andreakarasho
-// All rights reserved.
-// 
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. All advertising materials mentioning features or use of this software
-//    must display the following acknowledgement:
-//    This product includes software developed by andreakarasho - https://github.com/andreakarasho
-// 4. Neither the name of the copyright holder nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-// 
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ''AS IS'' AND ANY
-// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY
-// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-#endregion
+﻿// SPDX-License-Identifier: BSD-2-Clause
 
 using ClassicUO.Renderer.Effects;
 using Microsoft.Xna.Framework;
@@ -36,7 +6,6 @@ using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
@@ -150,9 +119,12 @@ namespace ClassicUO.Renderer
             _basicUOEffect.Brighlight.SetValue(f);
         }
 
-        public void DrawString(SpriteFont spriteFont, string text, int x, int y, Vector3 color)
+        public void DrawString(SpriteFont spriteFont, ReadOnlySpan<char> text, int x, int y, Vector3 color, float layerDepth)
+            => DrawString(spriteFont, text, new Vector2(x, y), color, layerDepth);
+
+        public void DrawString(SpriteFont spriteFont, ReadOnlySpan<char> text, Vector2 position, Vector3 color, float layerDepth)
         {
-            if (string.IsNullOrEmpty(text))
+            if (text.IsEmpty)
             {
                 return;
             }
@@ -232,19 +204,16 @@ namespace ClassicUO.Renderer
                 Rectangle cGlyph = glyphData[index];
 
                 float offsetX = baseOffset.X + (curOffset.X + cCrop.X) * axisDirX;
-
                 float offsetY = baseOffset.Y + (curOffset.Y + cCrop.Y) * axisDirY;
 
+                var pos = new Vector2(offsetX, offsetY);
                 Draw
                 (
                     textureValue,
-                    new Vector2
-                    (
-                        x + (int)Math.Round(offsetX),
-                        y + (int)Math.Round(offsetY)
-                    ),
+                    position + pos,
                     cGlyph,
-                    color
+                    color,
+                    layerDepth
                 );
 
                 curOffset.X += cKern.Y + cKern.Z;
@@ -622,7 +591,8 @@ namespace ClassicUO.Renderer
             Texture2D texture,
             Rectangle destinationRectangle,
             Rectangle sourceRectangle,
-            Vector3 hue
+            Vector3 hue,
+            float layerDepth
         )
         {
             int h = destinationRectangle.Height;
@@ -646,7 +616,8 @@ namespace ClassicUO.Renderer
                         texture,
                         pos,
                         rect,
-                        hue
+                        hue,
+                        layerDepth
                     );
 
                     w -= sourceRectangle.Width;
@@ -666,7 +637,7 @@ namespace ClassicUO.Renderer
             int width,
             int height,
             Vector3 hue,
-            float depth = 0f
+            float depth
         )
         {
             Rectangle rect = new Rectangle(x, y, width, 1);
@@ -698,7 +669,8 @@ namespace ClassicUO.Renderer
             Vector2 start,
             Vector2 end,
             Vector3 color,
-            float stroke
+            float stroke,
+            float depth
         )
         {
             var radians = ClassicUO.Utility.MathHelper.AngleBetweenVectors(start, end);
@@ -714,7 +686,7 @@ namespace ClassicUO.Renderer
                 Vector2.Zero,
                 new Vector2(length, stroke),
                 SpriteEffects.None,
-                0
+                depth
             );
         }
 
@@ -725,10 +697,11 @@ namespace ClassicUO.Renderer
         (
             Texture2D texture,
             Vector2 position,
-            Vector3 color
+            Vector3 color,
+            float depth
         )
         {
-            AddSprite(texture, 0f, 0f, 1f, 1f, position.X, position.Y, texture.Width, texture.Height, color, 0f, 0f, 0f, 1f, 0f, 0);
+            AddSprite(texture, 0f, 0f, 1f, 1f, position.X, position.Y, texture.Width, texture.Height, color, 0f, 0f, 0f, 1f, depth, 0);
         }
 
         public void Draw
@@ -736,7 +709,8 @@ namespace ClassicUO.Renderer
             Texture2D texture,
             Vector2 position,
             Rectangle? sourceRectangle,
-            Vector3 color
+            Vector3 color,
+            float depth
         )
         {
             float sourceX, sourceY, sourceW, sourceH;
@@ -761,7 +735,7 @@ namespace ClassicUO.Renderer
                 destH = texture.Height;
             }
 
-            AddSprite(texture, sourceX, sourceY, sourceW, sourceH, position.X, position.Y, destW, destH, color, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0);
+            AddSprite(texture, sourceX, sourceY, sourceW, sourceH, position.X, position.Y, destW, destH, color, 0.0f, 0.0f, 0.0f, 1.0f, depth, 0);
         }
 
         public void Draw
@@ -879,7 +853,8 @@ namespace ClassicUO.Renderer
         (
             Texture2D texture,
             Rectangle destinationRectangle,
-            Vector3 color
+            Vector3 color,
+            float layerDepth
         )
         {
             AddSprite(
@@ -897,7 +872,7 @@ namespace ClassicUO.Renderer
                 0.0f,
                 0.0f,
                 1.0f,
-                0.0f,
+                layerDepth,
                 0
             );
         }
@@ -907,7 +882,8 @@ namespace ClassicUO.Renderer
             Texture2D texture,
             Rectangle destinationRectangle,
             Rectangle? sourceRectangle,
-            Vector3 color
+            Vector3 color,
+            float layerDepth
         )
         {
             float sourceX, sourceY, sourceW, sourceH;
@@ -942,7 +918,7 @@ namespace ClassicUO.Renderer
                 0.0f,
                 0.0f,
                 1.0f,
-                0.0f,
+                layerDepth,
                 0
             );
         }
@@ -1492,12 +1468,12 @@ namespace ClassicUO.Renderer
     }
 
 
-    partial class Resources
+    public partial class Resources
     {
-        [EmbedResourceCSharp.FileEmbed("shaders/IsometricWorld.fxc")]
+        [FileEmbed.FileEmbed("shaders/IsometricWorld.fxc")]
         public static partial ReadOnlySpan<byte> GetUOShader();
 
-        [EmbedResourceCSharp.FileEmbed("shaders/xBR.fxc")]
+        [FileEmbed.FileEmbed("shaders/xBR.fxc")]
         public static partial ReadOnlySpan<byte> GetXBRShader();
     }
 }

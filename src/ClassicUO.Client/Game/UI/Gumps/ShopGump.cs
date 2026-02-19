@@ -1,49 +1,20 @@
-﻿#region license
+﻿// SPDX-License-Identifier: BSD-2-Clause
 
-// Copyright (c) 2024, andreakarasho
-// All rights reserved.
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. All advertising materials mentioning features or use of this software
-//    must display the following acknowledgement:
-//    This product includes software developed by andreakarasho - https://github.com/andreakarasho
-// 4. Neither the name of the copyright holder nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ''AS IS'' AND ANY
-// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY
-// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-#endregion
-
-using System;
-using System.Collections.Generic;
-using System.Linq;
+using ClassicUO.Assets;
 using ClassicUO.Configuration;
 using ClassicUO.Game.GameObjects;
+using ClassicUO.Game.Scenes;
 using ClassicUO.Game.UI.Controls;
 using ClassicUO.Input;
-using ClassicUO.Assets;
 using ClassicUO.Network;
 using ClassicUO.Renderer;
+using ClassicUO.Renderer.Animations;
 using ClassicUO.Resources;
 using ClassicUO.Utility;
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace ClassicUO.Game.UI.Gumps
 {
@@ -350,7 +321,7 @@ namespace ClassicUO.Game.UI.Gumps
 
         //        if (fromcliloc)
         //        {
-        //            shopItem.SetName(ClilocLoader.Instance.Translate(it.Name, $"\t{it.Amount}\t{it.ItemData.Name}", true));
+        //            shopItem.SetName(Client.Game.UO.FileManager.Clilocs.Translate(it.Name, $"\t{it.Amount}\t{it.ItemData.Name}", true));
         //        }
         //    }
         //}
@@ -485,9 +456,9 @@ namespace ClassicUO.Game.UI.Gumps
             base.Update();
         }
 
-        public override bool Draw(UltimaBatcher2D batcher, int x, int y)
+        public override bool AddToRenderLists(RenderLists renderLists, int x, int y, ref float layerDepthRef)
         {
-            return base.Draw(batcher, x, y);
+            return base.AddToRenderLists(renderLists, x, y, ref layerDepthRef);
         }
 
         private void ProcessListScroll()
@@ -713,7 +684,7 @@ namespace ClassicUO.Game.UI.Gumps
 
                 if (SerialHelper.IsItem(serial))
                 {
-                    height = Math.Max(TileDataLoader.Instance.StaticData[graphic].Height, height);
+                    height = Math.Max(Client.Game.UO.FileManager.TileData.StaticData[graphic].Height, height);
                 }
 
                 Add(
@@ -773,10 +744,10 @@ namespace ClassicUO.Game.UI.Gumps
 
             public bool InBuyGump { get; set; }
 
-            private static byte GetAnimGroup(ushort graphic)
+            private static byte GetAnimGroup(Animations animations, ushort graphic)
             {
-                var groupType = Client.Game.UO.Animations.GetAnimType(graphic);
-                switch (AnimationsLoader.Instance.GetGroupIndex(graphic, groupType))
+                var groupType = animations.GetAnimType(graphic);
+                switch (Client.Game.UO.FileManager.Animations.GetGroupIndex(graphic, groupType))
                 {
                     case AnimationGroups.Low:
                         return (byte)LowAnimationGroup.Stand;
@@ -804,52 +775,64 @@ namespace ClassicUO.Game.UI.Gumps
                 return true;
             }
 
-            public override bool Draw(UltimaBatcher2D batcher, int x, int y)
+            public override bool AddToRenderLists(RenderLists renderLists, int x, int y, ref float layerDepthRef)
             {
+                float layerDepth = layerDepthRef;
                 Vector3 hueVector;
 
                 if (InBuyGump && SerialHelper.IsMobile(LocalSerial))
                 {
+                    var animations = Client.Game.UO.Animations;
                     ushort graphic = Graphic;
 
-                    if (graphic >= Client.Game.UO.Animations.MaxAnimationCount)
+                    if (graphic >= animations.MaxAnimationCount)
                     {
                         graphic = 0;
                     }
 
-                    byte group = GetAnimGroup(graphic);
+                    byte group = GetAnimGroup(animations, graphic);
 
-                    var frames = Client.Game.UO.Animations.GetAnimationFrames(
+                    var frames = animations.GetAnimationFrames(
                         graphic,
                         group,
                         1,
                         out var hue2,
                         out _,
-                        true
+                        false
                     );
 
                     if (frames.Length != 0)
                     {
                         hueVector = ShaderHueTranslator.GetHueVector(
                             hue2,
-                            TileDataLoader.Instance.StaticData[Graphic].IsPartialHue,
+                            Client.Game.UO.FileManager.TileData.StaticData[Graphic].IsPartialHue,
                             1f
                         );
 
                         ref var spriteInfo = ref frames[0];
 
-                        if (spriteInfo.Texture != null)
+                        var texture = spriteInfo.Texture;
+                        if (texture != null)
                         {
-                            batcher.Draw(
-                                spriteInfo.Texture,
-                                new Rectangle(
-                                    x - 3,
-                                    y + 5 + 15,
-                                    Math.Min(spriteInfo.UV.Width, 45),
-                                    Math.Min(spriteInfo.UV.Height, 45)
-                                ),
-                                spriteInfo.UV,
-                                hueVector
+                            var sourceRectangle = spriteInfo.UV;
+                            renderLists.AddGumpWithAtlas
+                            (
+                                (batcher) =>
+                                {
+                                    batcher.Draw(
+                                        texture,
+                                        new Rectangle(
+                                            x - 3,
+                                            y + 5 + 15,
+                                            Math.Min(sourceRectangle.Width, 45),
+                                            Math.Min(sourceRectangle.Height, 45)
+                                        ),
+                                        sourceRectangle,
+                                        hueVector,
+                                        layerDepth
+                                    );
+                                    return true;
+                                }
                             );
                         }
                     }
@@ -859,7 +842,7 @@ namespace ClassicUO.Game.UI.Gumps
                     ref readonly var artInfo = ref Client.Game.UO.Arts.GetArt(Graphic);
                     hueVector = ShaderHueTranslator.GetHueVector(
                         Hue,
-                        TileDataLoader.Instance.StaticData[Graphic].IsPartialHue,
+                        Client.Game.UO.FileManager.TileData.StaticData[Graphic].IsPartialHue,
                         1f
                     );
 
@@ -882,25 +865,35 @@ namespace ClassicUO.Game.UI.Gumps
                         point.Y = (Height >> 1) - (originalSize.Y >> 1);
                     }
 
-                    batcher.Draw(
-                        artInfo.Texture,
-                        new Rectangle(
-                            x + point.X - 5,
-                            y + point.Y + 10,
-                            originalSize.X,
-                            originalSize.Y
-                        ),
-                        new Rectangle(
-                            artInfo.UV.X + rect.X,
-                            artInfo.UV.Y + rect.Y,
-                            rect.Width,
-                            rect.Height
-                        ),
-                        hueVector
+                    var texture = artInfo.Texture;
+                    var sourceRectangle = artInfo.UV;
+                    renderLists.AddGumpWithAtlas
+                    (
+                        (batcher) =>
+                        {
+                            batcher.Draw(
+                                texture,
+                                new Rectangle(
+                                    x + point.X - 5,
+                                    y + point.Y + 10,
+                                    originalSize.X,
+                                    originalSize.Y
+                                ),
+                                new Rectangle(
+                                    sourceRectangle.X + rect.X,
+                                    sourceRectangle.Y + rect.Y,
+                                    rect.Width,
+                                    rect.Height
+                                ),
+                                hueVector,
+                                layerDepth
+                            );
+                            return true;
+                        }
                     );
                 }
 
-                return base.Draw(batcher, x, y);
+                return base.AddToRenderLists(renderLists, x, y, ref layerDepthRef);
             }
         }
 
@@ -1124,33 +1117,42 @@ namespace ClassicUO.Game.UI.Gumps
                 );
             }
 
-            public override bool Draw(UltimaBatcher2D batcher, int x, int y)
+            public override bool AddToRenderLists(RenderLists renderLists, int x, int y, ref float layerDepthRef)
             {
-                ref readonly var gumpInfo0 = ref Client.Game.UO.Gumps.GetGump(_graphic);
-                ref readonly var gumpInfo1 = ref Client.Game.UO.Gumps.GetGump((uint)(_graphic + 1));
-                ref readonly var gumpInfo2 = ref Client.Game.UO.Gumps.GetGump((uint)(_graphic + 2));
+                float layerDepth = layerDepthRef;
+                renderLists.AddGumpWithAtlas
+                (
+                    batcher =>
+                    {
+                        ref readonly var gumpInfo0 = ref Client.Game.UO.Gumps.GetGump(_graphic);
+                        ref readonly var gumpInfo1 = ref Client.Game.UO.Gumps.GetGump((uint)(_graphic + 1));
+                        ref readonly var gumpInfo2 = ref Client.Game.UO.Gumps.GetGump((uint)(_graphic + 2));
 
-                var hueVector = ShaderHueTranslator.GetHueVector(0, false, Alpha, true);
+                        var hueVector = ShaderHueTranslator.GetHueVector(0, false, Alpha, true);
 
-                int middleWidth = Width - gumpInfo0.UV.Width - gumpInfo2.UV.Width;
+                        int middleWidth = Width - gumpInfo0.UV.Width - gumpInfo2.UV.Width;
 
-                batcher.Draw(gumpInfo0.Texture, new Vector2(x, y), gumpInfo0.UV, hueVector);
+                        batcher.Draw(gumpInfo0.Texture, new Vector2(x, y), gumpInfo0.UV, hueVector, layerDepth);
 
-                batcher.DrawTiled(
-                    gumpInfo1.Texture,
-                    new Rectangle(x + gumpInfo0.UV.Width, y, middleWidth, gumpInfo1.UV.Height),
-                    gumpInfo1.UV,
-                    hueVector
+                        batcher.DrawTiled(
+                            gumpInfo1.Texture,
+                            new Rectangle(x + gumpInfo0.UV.Width, y, middleWidth, gumpInfo1.UV.Height),
+                            gumpInfo1.UV,
+                            hueVector,
+                            layerDepth
+                        );
+
+                        batcher.Draw(
+                            gumpInfo2.Texture,
+                            new Vector2(x + Width - gumpInfo2.UV.Width, y),
+                            gumpInfo2.UV,
+                            hueVector,
+                            layerDepth
+                        );
+                        return true;
+                    }
                 );
-
-                batcher.Draw(
-                    gumpInfo2.Texture,
-                    new Vector2(x + Width - gumpInfo2.UV.Width, y),
-                    gumpInfo2.UV,
-                    hueVector
-                );
-
-                return base.Draw(batcher, x, y);
+                return base.AddToRenderLists(renderLists, x, y, ref layerDepthRef);
             }
         }
 
@@ -1175,41 +1177,48 @@ namespace ClassicUO.Game.UI.Gumps
                 _tiled = tiled;
             }
 
-            public override bool Draw(UltimaBatcher2D batcher, int x, int y)
+            public override bool AddToRenderLists(RenderLists renderLists, int x, int y, ref float layerDepthRef)
             {
+                float layerDepth = layerDepthRef;
                 var gumpInfo = Client.Game.UO.Gumps.GetGump(_graphic);
                 var hueVector = ShaderHueTranslator.GetHueVector(0);
 
-                if (_tiled)
+                renderLists.AddGumpWithAtlas(batcher =>
                 {
-                    batcher.DrawTiled(
-                        gumpInfo.Texture,
-                        new Rectangle(x, y, Width, Height),
-                        new Rectangle(
-                            gumpInfo.UV.X + _rect.X,
-                            gumpInfo.UV.Y + _rect.Y,
-                            _rect.Width,
-                            _rect.Height
-                        ),
-                        hueVector
-                    );
-                }
-                else
-                {
-                    batcher.Draw(
-                        gumpInfo.Texture,
-                        new Rectangle(x, y, Width, Height),
-                        new Rectangle(
-                            gumpInfo.UV.X + _rect.X,
-                            gumpInfo.UV.Y + _rect.Y,
-                            _rect.Width,
-                            _rect.Height
-                        ),
-                        hueVector
-                    );
-                }
+                    if (_tiled)
+                    {
+                        batcher.DrawTiled(
+                            gumpInfo.Texture,
+                            new Rectangle(x, y, Width, Height),
+                            new Rectangle(
+                                gumpInfo.UV.X + _rect.X,
+                                gumpInfo.UV.Y + _rect.Y,
+                                _rect.Width,
+                                _rect.Height
+                            ),
+                            hueVector,
+                            layerDepth
+                        );
+                    }
+                    else
+                    {
+                        batcher.Draw(
+                            gumpInfo.Texture,
+                            new Rectangle(x, y, Width, Height),
+                            new Rectangle(
+                                gumpInfo.UV.X + _rect.X,
+                                gumpInfo.UV.Y + _rect.Y,
+                                _rect.Width,
+                                _rect.Height
+                            ),
+                            hueVector,
+                            layerDepth
+                        );
+                    }
+                    return true;
+                });
 
-                return base.Draw(batcher, x, y);
+                return base.AddToRenderLists(renderLists, x, y, ref layerDepthRef);
             }
         }
     }

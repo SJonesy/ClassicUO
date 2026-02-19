@@ -1,44 +1,15 @@
-#region license
+// SPDX-License-Identifier: BSD-2-Clause
 
-// Copyright (c) 2024, andreakarasho
-// All rights reserved.
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. All advertising materials mentioning features or use of this software
-//    must display the following acknowledgement:
-//    This product includes software developed by andreakarasho - https://github.com/andreakarasho
-// 4. Neither the name of the copyright holder nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ''AS IS'' AND ANY
-// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY
-// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-#endregion
-
-using System;
-using System.Collections.Generic;
 using ClassicUO.Configuration;
 using ClassicUO.Game.Scenes;
 using ClassicUO.Game.UI.Controls;
 using ClassicUO.Game.UI.Gumps;
 using ClassicUO.Input;
 using ClassicUO.Renderer;
+using ClassicUO.Utility;
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using System.Collections.Generic;
 
 namespace ClassicUO.Game.Managers
 {
@@ -53,7 +24,7 @@ namespace ClassicUO.Game.Managers
         private static bool _isDraggingControl;
         private static Control _keyboardFocusControl, _lastFocus;
         private static bool _needSort;
-
+        private static readonly RenderLists _renderLists = new();
 
         public static float ContainerScale { get; set; } = 1f;
 
@@ -389,16 +360,27 @@ namespace ClassicUO.Game.Managers
 
         public static void Draw(UltimaBatcher2D batcher)
         {
+            _renderLists.Clear();
+
             SortControlsByInfo();
 
             batcher.Begin();
+            batcher.SetStencil(DepthStencilState.Default);
+
+            float layerDepth = -10000;
 
             for (LinkedListNode<Gump> last = Gumps.Last; last != null; last = last.Previous)
             {
                 Control g = last.Value;
-                g.Draw(batcher, g.X, g.Y);
+                layerDepth+=10;
+                g.AddToRenderLists(_renderLists, g.X, g.Y, ref layerDepth);
             }
 
+            Profiler.EnterContext(Profiler.ProfilerContext.RENDER_FRAME_UI);
+            _renderLists.DrawRenderLists(batcher, sbyte.MaxValue);
+            Profiler.ExitContext(Profiler.ProfilerContext.RENDER_FRAME_UI);
+
+            batcher.SetStencil(null);
             batcher.End();
         }
 
@@ -540,6 +522,46 @@ namespace ClassicUO.Game.Managers
 
             return null;
         }
+
+        /// <summary>
+        ///     Returns all controls which are part of a Gump from the provided list,
+        ///     as long as they are below the current mouse cursor position.
+        ///     
+        ///     Never returns null, but an empty enumerable instead.
+        /// </summary>
+        /// <param name="allowedGumps">Gumps for which hovered controls should be returned</param>
+        /// <returns>Read-only enumerable with the desired controls.</returns>
+        public static IEnumerable<Control> GetAllMouseOverControlsOfType<T>() where T : Control
+        {
+            List<Control> results = new List<Control>();
+
+            Point position = Mouse.Position;
+
+            Control control = null;
+
+            IsModalOpen = IsModalControlOpen();
+
+            for (LinkedListNode<Gump> first = Gumps.First; first != null; first = first.Next)
+            {
+                Control c = first.Value;
+
+                if (IsModalOpen && !c.IsModal || !c.IsVisible || !c.IsEnabled || c is not T)
+                {
+                    continue;
+                }
+
+                c.HitTest(position, ref control);
+
+                if (control != null)
+                {
+                    results.Add(control);
+                }
+            }
+
+            return results.AsReadOnly();
+        }
+
+
 
         public static void MakeTopMostGump(Control control)
         {

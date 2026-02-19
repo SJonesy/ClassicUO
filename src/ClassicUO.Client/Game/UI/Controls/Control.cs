@@ -1,52 +1,23 @@
-#region license
+// SPDX-License-Identifier: BSD-2-Clause
 
-// Copyright (c) 2024, andreakarasho
-// All rights reserved.
-// 
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. All advertising materials mentioning features or use of this software
-//    must display the following acknowledgement:
-//    This product includes software developed by andreakarasho - https://github.com/andreakarasho
-// 4. Neither the name of the copyright holder nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-// 
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ''AS IS'' AND ANY
-// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY
-// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-#endregion
-
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using ClassicUO.Game.Managers;
+using ClassicUO.Game.Scenes;
 using ClassicUO.Input;
 using ClassicUO.Renderer;
 using ClassicUO.Utility;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
-using SDL2;
+using SDL3;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using Keyboard = ClassicUO.Input.Keyboard;
-using Mouse = ClassicUO.Input.Mouse;
 
 namespace ClassicUO.Game.UI.Controls
 {
     internal abstract class Control
     {
+        protected const float CHILD_LAYER_INCREMENT = 0.01f;
         internal static int _StepsDone = 1;
         internal static int _StepChanger = 1;
 
@@ -261,9 +232,7 @@ namespace ClassicUO.Game.UI.Controls
             }
         }
 
-        
-
-        public virtual bool Draw(UltimaBatcher2D batcher, int x, int y)
+        public virtual bool AddToRenderLists(RenderLists renderLists, int x, int y, ref float layerDepth)
         {
             if (IsDisposed)
             {
@@ -276,12 +245,13 @@ namespace ClassicUO.Game.UI.Controls
                 {
                     if (c.IsVisible)
                     {
-                        c.Draw(batcher, c.X + x, c.Y + y);
+                        layerDepth += CHILD_LAYER_INCREMENT;
+                        c.AddToRenderLists(renderLists, c.X + x, c.Y + y, ref layerDepth);
                     }
                 }
             }
 
-            DrawDebug(batcher, x, y);
+            DrawDebug(renderLists, x, y, layerDepth);
 
             return true;
         }
@@ -355,20 +325,28 @@ namespace ClassicUO.Game.UI.Controls
             }
         }
 
-        private void DrawDebug(UltimaBatcher2D batcher, int x, int y)
+        private void DrawDebug(RenderLists renderLists, int x, int y, float layerDepth)
         {
             if (IsVisible && CUOEnviroment.Debug)
             {
                 Vector3 hueVector = ShaderHueTranslator.GetHueVector(0);
 
-                batcher.DrawRectangle
+                renderLists.AddGumpNoAtlas
                 (
-                    SolidColorTextureCache.GetTexture(Color.Green),
-                    x,
-                    y,
-                    Width,
-                    Height,
-                    hueVector
+                    (batcher) =>
+                    {
+                        batcher.DrawRectangle
+                        (
+                            SolidColorTextureCache.GetTexture(Color.Green),
+                            x,
+                            y,
+                            Width,
+                            Height,
+                            hueVector,
+                            layerDepth
+                        );
+                        return true;
+                    }
                 );
             }
         }
@@ -489,13 +467,15 @@ namespace ClassicUO.Game.UI.Controls
             return null;
         }
 
-        public virtual void Add(Control c, int page = 0)
+        public virtual T Add<T>(T c, int page = 0) where T : Control
         {
             c.Page = page;
             c.Parent = this;
             OnChildAdded();
-        }
 
+            return c;
+        }
+        
         public void Insert(int index, Control c, int page = 0)
         {
             c.Page = 0;
@@ -830,7 +810,7 @@ namespace ClassicUO.Game.UI.Controls
                 }
 
                 Children.Clear();
-            } 
+            }
 
             IsDisposed = true;
         }

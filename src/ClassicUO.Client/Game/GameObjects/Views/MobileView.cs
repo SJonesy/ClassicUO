@@ -1,47 +1,15 @@
-#region license
+// SPDX-License-Identifier: BSD-2-Clause
 
-// Copyright (c) 2024, andreakarasho
-// All rights reserved.
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. All advertising materials mentioning features or use of this software
-//    must display the following acknowledgement:
-//    This product includes software developed by andreakarasho - https://github.com/andreakarasho
-// 4. Neither the name of the copyright holder nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ''AS IS'' AND ANY
-// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY
-// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-#endregion
-
-using System;
-using System.Collections.Generic;
+using ClassicUO.Assets;
 using ClassicUO.Configuration;
 using ClassicUO.Game.Data;
-using ClassicUO.Game.Managers;
 using ClassicUO.Game.Scenes;
-using ClassicUO.Input;
-using ClassicUO.Assets;
 using ClassicUO.Renderer;
 using ClassicUO.Utility;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using System;
+using System.Collections.Generic;
 
 namespace ClassicUO.Game.GameObjects
 {
@@ -90,7 +58,7 @@ namespace ClassicUO.Game.GameObjects
                     ProfileManager.CurrentProfile.PartyAura && World.Party.Contains(this)
                         ? ProfileManager.CurrentProfile.PartyAuraHue
                         : Notoriety.GetHue(NotorietyFlag),
-                    depth + 1f
+                    depth
                 );
             }
 
@@ -183,7 +151,7 @@ namespace ClassicUO.Game.GameObjects
             ProcessSteps(out byte dir);
             byte layerDir = dir;
 
-            AnimationsLoader.Instance.GetAnimDirection(ref dir, ref IsFlipped);
+            Client.Game.UO.Animations.GetAnimDirection(ref dir, ref IsFlipped);
 
             ushort graphic = GetGraphicForAnimation();
             byte animGroup = GetGroupForAnimation(this, graphic, true);
@@ -202,7 +170,10 @@ namespace ClassicUO.Game.GameObjects
                     && mountGraphic < Client.Game.UO.Animations.MaxAnimationCount
                 )
                 {
-                    mountOffsetY = Client.Game.UO.Animations.GetMountedHeightOffset(mountGraphic);
+                    if (Mounts.TryGet(mount.Graphic, out var mountInfo))
+                    {
+                        mountOffsetY = mountInfo.OffsetY;
+                    }
 
                     if (hasShadow)
                     {
@@ -294,7 +265,7 @@ namespace ClassicUO.Game.GameObjects
 
                     ProcessSteps(out dir);
 
-                    AnimationsLoader.Instance.FixSittingDirection(
+                    Client.Game.UO.FileManager.Animations.FixSittingDirection(
                         ref dir,
                         ref IsFlipped,
                         ref drawX,
@@ -410,7 +381,7 @@ namespace ClassicUO.Game.GameObjects
                             }
 
                             if (
-                                AnimationsLoader.Instance.EquipConversions.TryGetValue(
+                                Client.Game.UO.FileManager.Animations.EquipConversions.TryGetValue(
                                     Graphic,
                                     out Dictionary<ushort, EquipConvData> map
                                 )
@@ -523,7 +494,7 @@ namespace ClassicUO.Game.GameObjects
                 }
 
                 if (
-                    AnimationsLoader.Instance.EquipConversions.TryGetValue(
+                    Client.Game.UO.FileManager.Animations.EquipConversions.TryGetValue(
                         owner.Graphic,
                         out Dictionary<ushort, EquipConvData> map
                     )
@@ -698,8 +669,7 @@ namespace ClassicUO.Game.GameObjects
                 out var hueFromFile,
                 out _,
                 isEquip,
-                false,
-                forceUOP
+                false
             );
 
             if (hueFromFile == 0)
@@ -1017,9 +987,11 @@ namespace ClassicUO.Game.GameObjects
                 Client.Game.UO.Version >= ClientVersion.CV_7000
                 && (Graphic == 666 || Graphic == 667 || Graphic == 0x02B7 || Graphic == 0x02B6);
 
+            var animations = Client.Game.UO.Animations;
+
             ProcessSteps(out byte dir);
             bool isFlipped = IsFlipped;
-            AnimationsLoader.Instance.GetAnimDirection(ref dir, ref isFlipped);
+            animations.GetAnimDirection(ref dir, ref isFlipped);
 
             ushort graphic = GetGraphicForAnimation();
             byte animGroup = GetGroupForAnimation(this, graphic, true);
@@ -1063,7 +1035,7 @@ namespace ClassicUO.Game.GameObjects
                             int y = position.Y - (spriteInfo.UV.Height + spriteInfo.Center.Y);
 
                             if (
-                                Client.Game.UO.Animations.PixelCheck(
+                                animations.PixelCheck(
                                     mountGraphic,
                                     animGroupMount,
                                     dir,
@@ -1081,9 +1053,10 @@ namespace ClassicUO.Game.GameObjects
                                 return true;
                             }
 
-                            position.Y += Client.Game.UO.Animations.GetMountedHeightOffset(
-                                mountGraphic
-                            );
+                            if (Mounts.TryGet(mount.Graphic, out var moutInfo))
+                            {
+                                position.Y += moutInfo.OffsetY;
+                            }
                         }
                     }
                 }
@@ -1097,7 +1070,7 @@ namespace ClassicUO.Game.GameObjects
                 int y = position.Y - (spriteInfo.UV.Height + spriteInfo.Center.Y);
 
                 if (
-                    Client.Game.UO.Animations.PixelCheck(
+                    animations.PixelCheck(
                         graphic,
                         animGroup,
                         dir,
@@ -1159,7 +1132,7 @@ namespace ClassicUO.Game.GameObjects
                             int y = position.Y - (spriteInfo.UV.Height + spriteInfo.Center.Y);
 
                             if (
-                                Client.Game.UO.Animations.PixelCheck(
+                                animations.PixelCheck(
                                     graphic,
                                     animGroup,
                                     dir,

@@ -1,37 +1,5 @@
-#region license
+// SPDX-License-Identifier: BSD-2-Clause
 
-// Copyright (c) 2024, andreakarasho
-// All rights reserved.
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. All advertising materials mentioning features or use of this software
-//    must display the following acknowledgement:
-//    This product includes software developed by andreakarasho - https://github.com/andreakarasho
-// 4. Neither the name of the copyright holder nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ''AS IS'' AND ANY
-// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY
-// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-#endregion
-
-using System;
-using System.Xml;
 using ClassicUO.Configuration;
 using ClassicUO.Game.Data;
 using ClassicUO.Game.GameObjects;
@@ -39,11 +7,12 @@ using ClassicUO.Game.Managers;
 using ClassicUO.Game.Scenes;
 using ClassicUO.Game.UI.Controls;
 using ClassicUO.Input;
-using ClassicUO.Assets;
-using ClassicUO.Network;
 using ClassicUO.Renderer;
 using ClassicUO.Utility;
 using Microsoft.Xna.Framework;
+using System;
+using System.Collections.Generic;
+using System.Xml;
 
 namespace ClassicUO.Game.UI.Gumps
 {
@@ -62,7 +31,7 @@ namespace ClassicUO.Game.UI.Gumps
 
         private GumpPic _picBase;
         private GumpPic _profilePic;
-        private readonly EquipmentSlot[] _slots = new EquipmentSlot[6];
+        private readonly List<EquipmentSlot> _slots = new List<EquipmentSlot>();
         private Label _titleLabel;
         private GumpPic _virtueMenuPic;
         private Button _warModeBtn;
@@ -290,17 +259,31 @@ namespace ClassicUO.Game.UI.Gumps
             _virtueMenuPic.MouseDoubleClick += VirtueMenu_MouseDoubleClickEvent;
 
             // Equipment slots for hat/earrings/neck/ring/bracelet
-            Add(_slots[0] = new EquipmentSlot(0, 2, 75, Layer.Helmet, this));
 
-            Add(_slots[1] = new EquipmentSlot(0, 2, 75 + 21, Layer.Earrings, this));
+            // add left
+            var initialPos = new Point(2, 70);
 
-            Add(_slots[2] = new EquipmentSlot(0, 2, 75 + 21 * 2, Layer.Necklace, this));
+            _slots.Add(new EquipmentSlot(0, initialPos.X, initialPos.Y, Layer.Helmet, this));
+            _slots.Add(new EquipmentSlot(0, initialPos.X, initialPos.Y + 21, Layer.Earrings, this));
+            _slots.Add(new EquipmentSlot(0, initialPos.X, initialPos.Y + 21 * 2, Layer.Necklace, this));
+            _slots.Add(new EquipmentSlot(0, initialPos.X, initialPos.Y + 21 * 3, Layer.Ring, this));
+            _slots.Add(new EquipmentSlot(0, initialPos.X, initialPos.Y + 21 * 4, Layer.Bracelet, this));
+            _slots.Add(new EquipmentSlot(0, initialPos.X, initialPos.Y + 21 * 5, Layer.Tunic, this));
+            _slots.Add(new EquipmentSlot(0, initialPos.X, initialPos.Y + 21 * 6, Layer.OneHanded, this));
+            _slots.Add(new EquipmentSlot(0, initialPos.X, initialPos.Y + 21 * 7, Layer.TwoHanded, this));
+            _slots.Add(new EquipmentSlot(0, initialPos.X, initialPos.Y + 21 * 8, Layer.Talisman, this));
 
-            Add(_slots[3] = new EquipmentSlot(0, 2, 75 + 21 * 3, Layer.Ring, this));
+            // add right
+            initialPos.X = 160 + 2;
+            _slots.Add(new EquipmentSlot(0, initialPos.X, initialPos.Y, Layer.Robe, this));
+            _slots.Add(new EquipmentSlot(0, initialPos.X, initialPos.Y + 21, Layer.Gloves, this));
+            _slots.Add(new EquipmentSlot(0, initialPos.X, initialPos.Y + 21 * 2, Layer.Pants, this));
+            _slots.Add(new EquipmentSlot(0, initialPos.X, initialPos.Y + 21 * 3, Layer.Arms, this));
+            _slots.Add(new EquipmentSlot(0, initialPos.X, initialPos.Y + 21 * 4, Layer.Cloak, this));
+            _slots.Add(new EquipmentSlot(0, initialPos.X, initialPos.Y + 21 * 5, Layer.Shoes, this));
 
-            Add(_slots[4] = new EquipmentSlot(0, 2, 75 + 21 * 4, Layer.Bracelet, this));
-
-            Add(_slots[5] = new EquipmentSlot(0, 2, 75 + 21 * 5, Layer.Tunic, this));
+            foreach (var slot in _slots)
+                Add(slot);
 
             // Paperdoll control!
             _paperDollInteractable = new PaperDollInteractable(8, 19, LocalSerial, this);
@@ -378,24 +361,17 @@ namespace ClassicUO.Game.UI.Gumps
         {
             if (args.Button == MouseButtonType.Left)
             {
-                if (CUOEnviroment.IsOutlands)
+                PartyGump party = UIManager.GetGump<PartyGump>();
+
+                if (party == null)
                 {
-                    NetClient.Socket.Send_ASCIISpeechRequest("party", MessageType.Command, 0, 0);
+                    int x = Client.Game.ClientBounds.Width / 2 - 272;
+                    int y = Client.Game.ClientBounds.Height / 2 - 240;
+                    UIManager.Add(new PartyGump(World, x, y, World.Party.CanLoot));
                 }
                 else
                 {
-                    PartyGump party = UIManager.GetGump<PartyGump>();
-
-                    if (party == null)
-                    {
-                        int x = Client.Game.Window.ClientBounds.Width / 2 - 272;
-                        int y = Client.Game.Window.ClientBounds.Height / 2 - 240;
-                        UIManager.Add(new PartyGump(World, x, y, World.Party.CanLoot));
-                    }
-                    else
-                    {
-                        party.BringOnTop();
-                    }
+                    party.BringOnTop();
                 }
             }
         }
@@ -523,7 +499,7 @@ namespace ClassicUO.Game.UI.Gumps
 
                         if (World.TargetManager.TargetingState == CursorTarget.SetTargetClientSide)
                         {
-                            UIManager.Add(new InspectorGump(World,item));
+                            UIManager.Add(new InspectorGump(World, item));
                         }
                     }
                     else if (!World.DelayedObjectClickManager.IsEnabled)
@@ -584,7 +560,7 @@ namespace ClassicUO.Game.UI.Gumps
 
             if (mobile != null)
             {
-                for (int i = 0; i < _slots.Length; i++)
+                for (int i = 0; i < _slots.Count; i++)
                 {
                     int idx = (int)_slots[i].Layer;
 
@@ -698,7 +674,7 @@ namespace ClassicUO.Game.UI.Gumps
                             ref readonly var gumpInfo = ref Client.Game.UO.Gumps.GetGump(0x0804);
 
                             UIManager.Add(
-                                new HealthBarGump(World,LocalSerial)
+                                new HealthBarGump(World, LocalSerial)
                                 {
                                     X = Mouse.Position.X - (gumpInfo.UV.Width >> 1),
                                     Y = Mouse.Position.Y - 5
@@ -764,6 +740,7 @@ namespace ClassicUO.Game.UI.Gumps
                 {
                     _itemGump?.Dispose();
                     _itemGump = null;
+                    SetTooltip($"{Layer} slot");
                 }
 
                 Mobile mobile = _paperDollGump.World.Mobiles.Get(_paperDollGump.LocalSerial);
@@ -842,7 +819,7 @@ namespace ClassicUO.Game.UI.Gumps
                     }
                 }
 
-                public override bool Draw(UltimaBatcher2D batcher, int x, int y)
+                public override bool AddToRenderLists(RenderLists renderLists, int x, int y, ref float layerDepthRef)
                 {
                     Item item = _gump.World.Items.Get(LocalSerial);
 
@@ -865,23 +842,34 @@ namespace ClassicUO.Game.UI.Gumps
 
                     ref readonly var artInfo = ref Client.Game.UO.Arts.GetArt(item.DisplayedGraphic);
 
-                    if (artInfo.Texture != null)
+                    var texture = artInfo.Texture;
+                    if (texture != null)
                     {
-                        batcher.Draw(
-                            artInfo.Texture,
-                            new Rectangle(
-                                x + _point.X,
-                                y + _point.Y,
-                                _originalSize.X,
-                                _originalSize.Y
-                            ),
-                            new Rectangle(
-                                artInfo.UV.X + _rect.X,
-                                artInfo.UV.Y + _rect.Y,
-                                _rect.Width,
-                                _rect.Height
-                            ),
-                            hueVector
+                        float layerDepth = layerDepthRef;
+                        var sourceRectangle = artInfo.UV;
+                        renderLists.AddGumpWithAtlas
+                        (
+                            (batcher) =>
+                            {
+                                batcher.Draw(
+                                    texture,
+                                    new Rectangle(
+                                        x + _point.X,
+                                        y + _point.Y,
+                                        _originalSize.X,
+                                        _originalSize.Y
+                                    ),
+                                    new Rectangle(
+                                        sourceRectangle.X + _rect.X,
+                                        sourceRectangle.Y + _rect.Y,
+                                        _rect.Width,
+                                        _rect.Height
+                                    ),
+                                    hueVector,
+                                    layerDepth
+                                );
+                                return true;
+                            }
                         );
 
                         return true;

@@ -1,34 +1,4 @@
-#region license
-
-// Copyright (c) 2024, andreakarasho
-// All rights reserved.
-// 
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. All advertising materials mentioning features or use of this software
-//    must display the following acknowledgement:
-//    This product includes software developed by andreakarasho - https://github.com/andreakarasho
-// 4. Neither the name of the copyright holder nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-// 
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ''AS IS'' AND ANY
-// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY
-// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-#endregion
+// SPDX-License-Identifier: BSD-2-Clause
 
 using System;
 using System.Collections.Generic;
@@ -40,6 +10,7 @@ using System.Text.Json.Serialization;
 using System.Xml;
 using ClassicUO.Configuration.Json;
 using ClassicUO.Game;
+using ClassicUO.Game.Data;
 using ClassicUO.Game.GameObjects;
 using ClassicUO.Game.Managers;
 using ClassicUO.Game.UI.Gumps;
@@ -49,6 +20,7 @@ using Microsoft.Xna.Framework;
 namespace ClassicUO.Configuration
 {
     //[JsonSourceGenerationOptions(WriteIndented = true, PropertyNamingPolicy = JsonKnownNamingPolicy.Unspecified)]
+    [JsonSerializable(typeof(GlobalProfile), GenerationMode = JsonSourceGenerationMode.Metadata)]
     [JsonSerializable(typeof(Profile), GenerationMode = JsonSourceGenerationMode.Metadata)]
     sealed partial class ProfileJsonContext : JsonSerializerContext
     {
@@ -74,7 +46,11 @@ namespace ClassicUO.Configuration
         public static ProfileJsonContext DefaultToUse { get; } = new ProfileJsonContext(_jsonOptions.Value);
     }
 
-
+    internal sealed class GlobalProfile
+    {
+        public int MaxJournalFiles { get; set; } = 100;
+        public bool JournalFileWithSerial { get; set; } = false;
+    }
 
     internal sealed class Profile
     {
@@ -132,6 +108,7 @@ namespace ClassicUO.Configuration
         public bool EnableStatReport { get; set; } = true;
         public bool EnableSkillReport { get; set; } = true;
         public bool UseOldStatusGump { get; set; }
+        public bool StatusGumpBarMutuallyExclusive { get; set; } = true;
         public int BackpackStyle { get; set; }
         public bool HighlightGameObjects { get; set; }
         public bool HighlightMobilesByParalize { get; set; } = true;
@@ -228,6 +205,7 @@ namespace ClassicUO.Configuration
         [JsonConverter(typeof(Point2Converter))] public Point OverrideContainerLocationPosition { get; set; } = new Point(200, 200);
         public bool HueContainerGumps { get; set; } = true;
         public bool DragSelectHumanoidsOnly { get; set; }
+        public bool DragSelectHostileOnly { get; set; }
         public int DragSelectStartX { get; set; } = 100;
         public int DragSelectStartY { get; set; } = 100;
         public bool DragSelectAsAnchor { get; set; } = false;
@@ -242,14 +220,12 @@ namespace ClassicUO.Configuration
         public int InfoBarHighlightType { get; set; } // 0 = text colour changes, 1 = underline
 
         public bool CounterBarEnabled { get; set; }
-        public bool CounterBarHighlightOnUse { get; set; }
+        public bool CounterBarHighlightOnChange { get; set; } = true;
         public bool CounterBarHighlightOnAmount { get; set; }
         public bool CounterBarDisplayAbbreviatedAmount { get; set; }
         public int CounterBarAbbreviatedAmount { get; set; } = 1000;
         public int CounterBarHighlightAmount { get; set; } = 5;
         public int CounterBarCellSize { get; set; } = 40;
-        public int CounterBarRows { get; set; } = 1;
-        public int CounterBarColumns { get; set; } = 1;
 
         public bool ShowSkillsChangedMessage { get; set; } = true;
         public int ShowSkillsChangedDeltaValue { get; set; } = 1;
@@ -299,6 +275,8 @@ namespace ClassicUO.Configuration
 
         public bool HighlightContainerWhenSelected { get; set; }
 
+        public bool UseNewTargetSystem { get; set; } = true;
+        public bool UseKrEquipUnequipPacket { get; set; }
         public bool ShowHouseContent { get; set; }
         public bool SaveHealthbars { get; set; }
         public bool TextFading { get; set; } = true;
@@ -322,6 +300,7 @@ namespace ClassicUO.Configuration
         public int WorldMapZoomIndex { get; set; } = 4;
         public bool WorldMapShowCoordinates { get; set; } = true;
         public bool WorldMapShowMouseCoordinates { get; set; } = true;
+        public bool WorldMapShowSextantCoordinates { get; set; } = false;
         public bool WorldMapShowMobiles { get; set; } = true;
         public bool WorldMapShowPlayerName { get; set; } = true;
         public bool WorldMapShowPlayerBar { get; set; } = true;
@@ -334,16 +313,50 @@ namespace ClassicUO.Configuration
         public string WorldMapHiddenZoneFiles { get; set; } = string.Empty;
         public bool WorldMapShowGridIfZoomed { get; set; } = true;
         public bool WorldMapAllowPositionalTarget { get; set; } = false;
-
+        public bool ShowDPSWithDamageNumbers { get; set; } = true;
 
         public static uint GumpsVersion { get; private set; }
+
+        //Alternate Journal
+        public bool UseAlternateJournal { get; set; }
+        public Dictionary<string, MessageType[]> JournalTabs { get; } = new Dictionary<string, MessageType[]>()
+        {
+            { "All", new MessageType[] {
+                MessageType.Alliance, MessageType.Command, MessageType.Emote,
+                MessageType.Encoded, MessageType.Focus, MessageType.Guild,
+                MessageType.Label, MessageType.Limit3Spell, MessageType.Party,
+                MessageType.Regular, MessageType.Spell, MessageType.System,
+                MessageType.Whisper, MessageType.Yell }
+            },
+            { "Chat", new MessageType[] {
+                MessageType.Regular,
+                MessageType.Guild,
+                MessageType.Alliance,
+                MessageType.Emote,
+                MessageType.Party,
+                MessageType.Whisper,
+                MessageType.Yell,
+            }
+            },
+            {
+                "Guild|Party", new MessageType[] {
+                    MessageType.Guild,
+                    MessageType.Alliance,
+                    MessageType.Party }
+            },
+            {
+                "System", new MessageType[] {
+                    MessageType.System }
+            }
+        };
+
+        public bool OverheadPartyMessages { get; set; }
 
         public void Save(World world, string path)
         {
             Log.Trace($"Saving path:\t\t{path}");
 
-            // Save profile settings
-            ConfigurationResolver.Save(this, Path.Combine(path, "profile.json"), ProfileJsonContext.DefaultToUse.Profile);
+            ProfileManager.Save(this, path);
 
             // Save opened gumps
             SaveGumps(world, path);
@@ -376,7 +389,7 @@ namespace ClassicUO.Configuration
                         gumps.AddLast(gump);
                     }
                 }
-                
+
                 LinkedListNode<Gump> first = gumps.First;
 
                 while (first != null)
@@ -553,7 +566,10 @@ namespace ClassicUO.Configuration
                                     break;
 
                                 case GumpType.Journal:
-                                    gump = new JournalGump(world);
+                                    if(ProfileManager.CurrentProfile.UseAlternateJournal)
+                                        gump = new ResizableJournal(world);
+                                    else
+                                        gump = new JournalGump(world);
 
                                     break;
 

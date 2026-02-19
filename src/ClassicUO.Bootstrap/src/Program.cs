@@ -7,6 +7,41 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 
+#if !DEBUG
+using System.IO;
+using System.Reflection;
+using System.Threading;
+
+AppDomain.CurrentDomain.UnhandledException += (s, e) =>
+{
+    var dt = DateTime.Now;
+    var version = Assembly.GetExecutingAssembly()?.GetName()?.Version?.ToString() ?? "0.0.0.0";
+    var sb = new System.Text.StringBuilder();
+    sb.AppendLine("######################## [START LOG] ########################");
+
+#if DEV_BUILD
+    sb.AppendLine($"ClassicUO [DEV_BUILD] - {version} - {dt}");
+#else
+    sb.AppendLine($"ClassicUO [STANDARD_BUILD] - {version} - {dt}");
+#endif
+
+    sb.AppendLine($"OS: {Environment.OSVersion.Platform} {(Environment.Is64BitOperatingSystem ? "x64" : "x86")}");
+    sb.AppendLine($"Thread: {Thread.CurrentThread.Name}");
+    sb.AppendLine();
+    sb.AppendFormat("Exception:\n{0}\n", e.ExceptionObject);
+    sb.AppendLine("######################## [END LOG] ########################");
+    sb.AppendLine();
+    sb.AppendLine();
+
+    Console.WriteLine(e.ExceptionObject.ToString());
+    var path = Path.Combine(AppContext.BaseDirectory, "Logs");
+
+    if (!Directory.Exists(path))
+        Directory.CreateDirectory(path);
+
+    File.WriteAllText(Path.Combine(path, $"{dt:yyyy-MM-dd_hh-mm-ss}_crash.txt"), sb.ToString());
+};
+#endif
 
 Global.Host.Run(args);
 Console.WriteLine("finished");
@@ -16,7 +51,6 @@ static class Global
 {
     // NOTE: this must be static otherwise GC does some weird stuff on delegates ¯\_(ツ)_/¯
     public static readonly ClassicUOHost Host = new ClassicUOHost();
-
 }
 
 sealed class ClassicUOHost : IPluginHandler
@@ -135,27 +169,46 @@ sealed class ClassicUOHost : IPluginHandler
     public void Run(string[] args)
     {
         var libName = "./cuo";
-        switch (Environment.OSVersion.Platform)
+
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
         {
-            case PlatformID.MacOSX:
-                libName += ".dylib";
-                break;
-            case PlatformID.Unix:
-                libName += ".so";
-                break;
-            default:
-                libName += ".dll";
-                break;
+            libName += ".dylib";
+        }
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        {
+            libName += ".so";
+        }
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            libName += ".dll";
+        }
+        else
+        {
+            Console.WriteLine("OS not supported");
+            throw new NotSupportedException("OS not suported");
         }
 
+        Console.WriteLine("ClassicUO lib loaded: {0}", libName);
+        
         var libPtr = Native.LoadLibrary(libName);
+        if (libPtr == IntPtr.Zero)
+        {
+            Console.WriteLine("Failed to load {0}. Maybe it doesn't exists.", libName);
+            throw new DllNotFoundException($"Failed to load {libName}. Maybe it doesn't exists.");
+        }
 
         unsafe
         {
             var initializePtr = Native.GetProcessAddress(libPtr, "Initialize");
+            if (initializePtr == IntPtr.Zero)
+            {
+                Console.WriteLine("'Initialize' entry point not found");
+                throw new EntryPointNotFoundException("'Initialize' entry point not found");
+            }
+
             var initializeMethod = Marshal.GetDelegateForFunctionPointer<dOnInitializeCuo>(initializePtr);
 
-            var argv = stackalloc IntPtr[args.Length];
+            var argv = new IntPtr[args.Length];
             for (int i = 0; i < args.Length; i++)
                 argv[i] = Marshal.StringToHGlobalAnsi(args[i]);
 
@@ -180,7 +233,8 @@ sealed class ClassicUOHost : IPluginHandler
             hostSetup.DisconnectedFn = _disconnectedDel.Pointer;
             hostSetup.CmdListFn = _cmdListDel.Pointer;
 
-            initializeMethod(argv, args.Length, mem);
+            fixed (IntPtr* argvPtr = argv)
+                initializeMethod(argvPtr, args.Length, mem);
 
             if (mem != null)
                 Marshal.FreeHGlobal(mem);
@@ -361,7 +415,14 @@ sealed class ClassicUOHost : IPluginHandler
         var f = (3, walking);
         var result = SendReflectionCmd((IntPtr)(&f));
         var toBool = Unsafe.AsRef<bool>(result.ToPointer());
-        Console.WriteLine("bool: {0} [{1}]", toBool, result);
+        return toBool;
+    }
+
+    public unsafe bool ReflectionWalkTo(int x, int y, int z, int distance)
+    {
+        var f = (4, x, y, z, distance);
+        var result = SendReflectionCmd((IntPtr)(&f));
+        var toBool = Unsafe.AsRef<bool>(result.ToPointer());
         return toBool;
     }
 
@@ -430,6 +491,7 @@ sealed class ClassicUOHost : IPluginHandler
         var count = Encoding.UTF8.GetByteCount(title);
 
         var ptr = stackalloc byte[count + 1];
+        ptr[count] = 0;
 
         fixed (char* titlePtr = title)
         //fixed (byte* ptr = &buf[0])

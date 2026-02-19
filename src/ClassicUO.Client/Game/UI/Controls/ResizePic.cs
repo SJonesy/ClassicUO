@@ -1,42 +1,12 @@
-#region license
+// SPDX-License-Identifier: BSD-2-Clause
 
-// Copyright (c) 2024, andreakarasho
-// All rights reserved.
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. All advertising materials mentioning features or use of this software
-//    must display the following acknowledgement:
-//    This product includes software developed by andreakarasho - https://github.com/andreakarasho
-// 4. Neither the name of the copyright holder nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ''AS IS'' AND ANY
-// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY
-// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-#endregion
-
-using System;
-using System.Collections.Generic;
-using ClassicUO.Assets;
+using ClassicUO.Game.Scenes;
 using ClassicUO.Renderer;
 using ClassicUO.Utility;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using System;
+using System.Collections.Generic;
 
 namespace ClassicUO.Game.UI.Controls
 {
@@ -265,22 +235,32 @@ namespace ClassicUO.Game.UI.Controls
             return Client.Game.UO.Gumps.PixelCheck(graphic, x, y);
         }
 
-        public override bool Draw(UltimaBatcher2D batcher, int x, int y)
+        public override bool AddToRenderLists(RenderLists renderLists, int x, int y, ref float layerDepthRef)
         {
-            if (batcher.ClipBegin(x, y, Width, Height))
-            {
-                Vector3 hueVector = ShaderHueTranslator.GetHueVector(0, false, Alpha, true);
+            float layerDepth = layerDepthRef;
+            renderLists.AddGumpNoAtlas(
+                batcher =>
+                {
+                    if (batcher.ClipBegin(x, y, Width, Height))
+                    {
+                        Vector3 hueVector = ShaderHueTranslator.GetHueVector(0, false, Alpha, true);
 
-                DrawInternal(batcher, x, y, hueVector);
-                base.Draw(batcher, x, y);
+                        DrawInternal(batcher, x, y, hueVector, layerDepth);
+                        RenderLists childRenderLists = new();
+                        base.AddToRenderLists(childRenderLists, x, y, ref layerDepth);
+                        childRenderLists.DrawRenderLists(batcher, sbyte.MaxValue);
 
-                batcher.ClipEnd();
-            }
+                        batcher.ClipEnd();
+                    }
+
+                    return true;
+                }
+            );
 
             return true;
         }
 
-        private void DrawInternal(UltimaBatcher2D batcher, int x, int y, Vector3 color)
+        private void DrawInternal(UltimaBatcher2D batcher, int x, int y, Vector3 color, float layerDepth)
         {
             var texture0 = GetTexture(0, out var bounds0);
             var texture1 = GetTexture(1, out var bounds1);
@@ -299,7 +279,7 @@ namespace ClassicUO.Game.UI.Controls
 
             if (texture0 != null)
             {
-                batcher.Draw(texture0, new Vector2(x, y), bounds0, color);
+                batcher.Draw(texture0, new Vector2(x, y), bounds0, color, layerDepth);
             }
 
             if (texture1 != null)
@@ -313,7 +293,8 @@ namespace ClassicUO.Game.UI.Controls
                         bounds1.Height
                     ),
                     bounds1,
-                    color
+                    color,
+                    layerDepth
                 );
             }
 
@@ -323,7 +304,8 @@ namespace ClassicUO.Game.UI.Controls
                     texture2,
                     new Vector2(x + (Width - bounds2.Width), y + offsetTop),
                     bounds2,
-                    color
+                    color,
+                    layerDepth
                 );
             }
 
@@ -338,7 +320,8 @@ namespace ClassicUO.Game.UI.Controls
                         Height - bounds0.Height - bounds5.Height
                     ),
                     bounds3,
-                    color
+                    color,
+                    layerDepth
                 );
             }
 
@@ -353,7 +336,8 @@ namespace ClassicUO.Game.UI.Controls
                         Height - bounds2.Height - bounds7.Height
                     ),
                     bounds4,
-                    color
+                    color,
+                    layerDepth
                 );
             }
 
@@ -363,7 +347,8 @@ namespace ClassicUO.Game.UI.Controls
                     texture5,
                     new Vector2(x, y + (Height - bounds5.Height)),
                     bounds5,
-                    color
+                    color,
+                    layerDepth
                 );
             }
 
@@ -378,7 +363,8 @@ namespace ClassicUO.Game.UI.Controls
                         bounds6.Height
                     ),
                     bounds6,
-                    color
+                    color,
+                    layerDepth
                 );
             }
 
@@ -388,7 +374,8 @@ namespace ClassicUO.Game.UI.Controls
                     texture7,
                     new Vector2(x + (Width - bounds7.Width), y + (Height - bounds7.Height)),
                     bounds7,
-                    color
+                    color,
+                    layerDepth
                 );
             }
 
@@ -403,7 +390,8 @@ namespace ClassicUO.Game.UI.Controls
                         Height - bounds2.Height - bounds7.Height
                     ),
                     bounds8,
-                    color
+                    color,
+                    layerDepth
                 );
             }
         }

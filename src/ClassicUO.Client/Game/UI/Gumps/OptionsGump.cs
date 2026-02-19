@@ -1,39 +1,6 @@
-#region license
+// SPDX-License-Identifier: BSD-2-Clause
 
-// Copyright (c) 2024, andreakarasho
-// All rights reserved.
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. All advertising materials mentioning features or use of this software
-//    must display the following acknowledgement:
-//    This product includes software developed by andreakarasho - https://github.com/andreakarasho
-// 4. Neither the name of the copyright holder nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ''AS IS'' AND ANY
-// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY
-// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-#endregion
-
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
+using ClassicUO.Assets;
 using ClassicUO.Configuration;
 using ClassicUO.Game.Data;
 using ClassicUO.Game.GameObjects;
@@ -41,13 +8,16 @@ using ClassicUO.Game.Managers;
 using ClassicUO.Game.Scenes;
 using ClassicUO.Game.UI.Controls;
 using ClassicUO.Input;
-using ClassicUO.Assets;
 using ClassicUO.Network;
 using ClassicUO.Renderer;
 using ClassicUO.Resources;
 using ClassicUO.Utility;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 
 namespace ClassicUO.Game.UI.Gumps
 {
@@ -58,6 +28,7 @@ namespace ClassicUO.Game.UI.Gumps
         private const int WIDTH = 700;
         private const int HEIGHT = 500;
         private const int TEXTBOX_HEIGHT = 25;
+        private const int SCREEN_ZOOM_STEPS = 20;
 
         private static Texture2D _logoTexture2D;
         private Combobox _auraType;
@@ -81,8 +52,8 @@ namespace ClassicUO.Game.UI.Gumps
 
 
         //counters
-        private Checkbox _enableCounters, _highlightOnUse, _highlightOnAmount, _enableAbbreviatedAmount;
-        private Checkbox _enableDragSelect, _dragSelectHumanoidsOnly;
+        private Checkbox _enableCounters, _highlightOnChange, _highlightOnAmount, _enableAbbreviatedAmount;
+        private Checkbox _enableDragSelect, _dragSelectHumanoidsOnly, _dragSelectHostileOnly;
 
         // sounds
         private Checkbox _enableSounds, _enableMusic, _footStepsSound, _combatMusic, _musicInBackground, _loginMusic;
@@ -91,6 +62,9 @@ namespace ClassicUO.Game.UI.Gumps
         private FontSelector _fontSelectorChat;
         private Checkbox _forceUnicodeJournal;
         private InputField _gameWindowHeight;
+        private Checkbox _maxJournalFilesEnabled;
+        private InputField _maxJournalFiles;
+        private Checkbox _journalFileWithSerial;
 
         private Checkbox _gameWindowLock, _gameWindowFullsize;
         // GameWindowPosition
@@ -134,6 +108,7 @@ namespace ClassicUO.Game.UI.Gumps
         private ClickableColorBox _innocentColorPickerBox, _friendColorPickerBox, _crimialColorPickerBox, _canAttackColorPickerBox, _enemyColorPickerBox, _murdererColorPickerBox, _neutralColorPickerBox, _beneficColorPickerBox, _harmfulColorPickerBox;
         private HSliderBar _lightBar;
         private Checkbox _buffBarTime, _uiButtonsSingleClick, _queryBeforAttackCheckbox, _queryBeforeBeneficialCheckbox, _spellColoringCheckbox, _spellFormatCheckbox, _enableFastSpellsAssign;
+        private Checkbox _newTargetSystem, _showDPSCheckbox;
 
         // macro
         private MacroControl _macroControl;
@@ -150,11 +125,12 @@ namespace ClassicUO.Game.UI.Gumps
         private Checkbox _showHouseContent;
         private Checkbox _showInfoBar;
         private Checkbox _ignoreAllianceMessages;
-        private Checkbox _ignoreGuildMessages;
+        private Checkbox _ignoreGuildMessages, _useAlternateJournal, _partyMessagesOverhead;
 
         // general
         private HSliderBar _sliderFPS, _circleOfTranspRadius;
         private HSliderBar _sliderSpeechDelay;
+        private HSliderBar _sliderScreenZoom;
         private HSliderBar _sliderZoom;
         private HSliderBar _soundsVolume, _musicVolume, _loginMusicVolume;
         private ClickableColorBox _speechColorPickerBox, _emoteColorPickerBox, _yellColorPickerBox, _whisperColorPickerBox, _partyMessageColorPickerBox, _guildMessageColorPickerBox, _allyMessageColorPickerBox, _chatMessageColorPickerBox, _partyAuraColorPickerBox;
@@ -163,9 +139,10 @@ namespace ClassicUO.Game.UI.Gumps
         private FontSelector _tooltip_font_selector;
         private HSliderBar _dragSelectStartX, _dragSelectStartY;
         private Checkbox _dragSelectAsAnchor;
+        private NiceButton _setAsNewDefault;
 
         // video
-        private Checkbox _use_old_status_gump, _windowBorderless, _enableDeathScreen, _enableBlackWhiteEffect, _altLights, _enableLight, _enableShadows, _enableShadowsStatics, _auraMouse, _runMouseInSeparateThread, _useColoredLights, _darkNights, _partyAura, _hideChatGradient, _animatedWaterEffect;
+        private Checkbox _use_old_status_gump, _statusGumpBarMutuallyExclusive, _windowBorderless, _enableDeathScreen, _enableBlackWhiteEffect, _altLights, _enableLight, _enableShadows, _enableShadowsStatics, _auraMouse, _runMouseInSeparateThread, _useColoredLights, _darkNights, _partyAura, _hideChatGradient, _animatedWaterEffect;
         private Combobox _lightLevelType;
         private Checkbox _use_smooth_boat_movement;
         private HSliderBar _terrainShadowLevel;
@@ -175,7 +152,7 @@ namespace ClassicUO.Game.UI.Gumps
         private Checkbox _showStatsMessage, _showSkillsMessage;
         private HSliderBar _showSkillsMessageDelta;
 
-
+        private GlobalProfile _globalProfile = ProfileManager.GlobalProfile;
         private Profile _currentProfile = ProfileManager.CurrentProfile;
 
         public OptionsGump(World world) : base(world, 0, 0)
@@ -987,7 +964,21 @@ namespace ClassicUO.Game.UI.Gumps
                 )
             );
 
-            _use_old_status_gump.IsVisible = !CUOEnviroment.IsOutlands;
+            _use_old_status_gump.IsVisible = true;
+            
+            section3.Add
+            (
+                _statusGumpBarMutuallyExclusive = AddCheckBox
+                (
+                    null,
+                    ResGumps.StatusGumpBarMutuallyExclusive,
+                    _currentProfile.StatusGumpBarMutuallyExclusive,
+                    startX,
+                    startY
+                )
+            );
+            
+            _statusGumpBarMutuallyExclusive.IsVisible = true;
 
             section3.Add
             (
@@ -1242,6 +1233,18 @@ namespace ClassicUO.Game.UI.Gumps
                     startY
                 )
             );
+            
+            section4.Add
+            (
+                _dragSelectHostileOnly = AddCheckBox
+                (
+                    null,
+                    ResGumps.DragHostileOnly,
+                    _currentProfile.DragSelectHostileOnly,
+                    startX,
+                    startY
+                )
+            );
 
             section4.Add(new Label(ResGumps.DragSelectStartingPosX, true, HUE_FONT));
             section4.Add(_dragSelectStartX = new HSliderBar(startX, startY, 200, 0, Client.Game.Scene.Camera.Bounds.Width, _currentProfile.DragSelectStartX, HSliderBarStyle.MetalWidgetRecessedBar, true, 0, HUE_FONT));
@@ -1300,6 +1303,25 @@ namespace ClassicUO.Game.UI.Gumps
             );
 
             section4.PopIndent();
+
+            section4.Add
+            (
+                _setAsNewDefault = new NiceButton
+                (
+                    startX, 
+                    startY,
+                    section4.Width - 18,
+                    25,
+                    ButtonAction.Default,
+                    ResGumps.SetAsNewDefault
+                )
+                { IsSelectable = true, IsSelected = true } //For styling, easier to distinguish as a button.
+            );
+            _setAsNewDefault.MouseUp += (s, e) => 
+            {
+                ProfileManager.SetProfileAsDefault(_currentProfile);
+                GameActions.Print(World, ResGeneral.DefaultProfileSet);
+            };
 
 
             SettingsSection section5 = AddSettingsSection(box, "Terrain & Statics");
@@ -1671,6 +1693,19 @@ namespace ClassicUO.Game.UI.Gumps
 
             SettingsSection section2 = AddSettingsSection(box, "Zoom");
             section2.Y = section.Bounds.Bottom + 40;
+
+            _sliderScreenZoom = AddHSlider(
+                null,
+                -SCREEN_ZOOM_STEPS,
+                SCREEN_ZOOM_STEPS,
+                GetScreenZoom(Settings.GlobalSettings.ScreenScale),
+                startX,
+                startY,
+                250
+            );
+            section2.Add(AddLabel(null, ResGumps.ScreenZoom, startX, startY));
+            section2.AddRight(_sliderScreenZoom);
+
             section2.Add(AddLabel(null, ResGumps.DefaultZoom, startX, startY));
 
             var cameraZoomCount = (int)((camera.ZoomMax - camera.ZoomMin) / camera.ZoomStep);
@@ -2419,6 +2454,61 @@ namespace ClassicUO.Game.UI.Gumps
                 World.Journal.CloseWriter();
             }
 
+            startX += 40;
+
+            _maxJournalFilesEnabled = AddCheckBox
+            (
+                rightArea,
+                ResGumps.MaxJournalFiles,
+                _globalProfile.MaxJournalFiles >= 0,
+                startX,
+                startY
+            );
+
+            startX += _maxJournalFilesEnabled.Width + 5;
+
+            _maxJournalFiles = AddInputField
+            (
+                rightArea,
+                startX,
+                startY,
+                50,
+                TEXTBOX_HEIGHT,
+                null,
+                50,
+                false,
+                true,
+                999
+            );
+
+            if (_globalProfile.MaxJournalFiles < 0)
+            {
+                // if the checkbox is unchecked, we set the value of the input field to 100
+                // so when the user checks it, there's a sensible default value.
+                _maxJournalFiles.SetText("100");
+            }
+            else
+            {
+                _maxJournalFiles.SetText(_globalProfile.MaxJournalFiles.ToString());
+            }
+
+            startX = 5;
+
+            startX += 40;
+            startY += _maxJournalFiles.Height + 2 + 5;
+
+            _journalFileWithSerial = AddCheckBox
+            (
+                rightArea,
+                ResGumps.JournalFileWithSerial,
+                _globalProfile.JournalFileWithSerial,
+                startX,
+                startY
+            );
+
+            startX = 5;
+            startY += _journalFileWithSerial.Height + 2 + 5;
+
             _chatAfterEnter = AddCheckBox
             (
                 rightArea,
@@ -2481,6 +2571,28 @@ namespace ClassicUO.Game.UI.Gumps
                 rightArea,
                 ResGumps.IgnoreAllianceMessages,
                 _currentProfile.IgnoreAllianceMessages,
+                startX,
+                startY
+            );
+
+            startY += _ignoreAllianceMessages.Height + 2;
+
+            _useAlternateJournal = AddCheckBox
+            (
+                rightArea,
+                ResGumps.UseAlternateJournal,
+                _currentProfile.UseAlternateJournal,
+                startX,
+                startY
+            );
+
+            startY += _useAlternateJournal.Height + 2;
+
+            _partyMessagesOverhead = AddCheckBox
+            (
+                rightArea,
+                ResGumps.OverheadPartyMessages,
+                _currentProfile.OverheadPartyMessages,
                 startX,
                 startY
             );
@@ -2634,6 +2746,17 @@ namespace ClassicUO.Game.UI.Gumps
             int startX = 5;
             int startY = 5;
 
+
+            _newTargetSystem = AddCheckBox(
+                rightArea,
+                ResGumps.NewTargetSystem,
+                _currentProfile.UseNewTargetSystem,
+                startX,
+                startY
+            );
+
+            startY += _newTargetSystem.Height + 2;
+
             _holdDownKeyTab = AddCheckBox
             (
                 rightArea,
@@ -2716,6 +2839,17 @@ namespace ClassicUO.Game.UI.Gumps
                 rightArea,
                 ResGumps.EnableFastSpellsAssign,
                 _currentProfile.FastSpellsAssign,
+                startX,
+                startY
+            );
+
+            startY += _enableFastSpellsAssign.Height + 2;
+
+            _showDPSCheckbox = AddCheckBox
+            (
+                rightArea,
+                ResGumps.ShowDPSWithDamage,
+                _currentProfile.ShowDPSWithDamageNumbers,
                 startX,
                 startY
             );
@@ -2877,16 +3011,16 @@ namespace ClassicUO.Game.UI.Gumps
             startX += 40;
             startY += _enableCounters.Height + 2;
 
-            _highlightOnUse = AddCheckBox
+            _highlightOnChange = AddCheckBox
             (
                 rightArea,
-                ResGumps.HighlightOnUse,
-                _currentProfile.CounterBarHighlightOnUse,
+                ResGumps.HighlightOnChange,
+                _currentProfile.CounterBarHighlightOnChange,
                 startX,
                 startY
             );
 
-            startY += _highlightOnUse.Height + 2;
+            startY += _highlightOnChange.Height + 2;
 
             _enableAbbreviatedAmount = AddCheckBox
             (
@@ -2957,7 +3091,6 @@ namespace ClassicUO.Game.UI.Gumps
             startY += text.Height + 2;
             text = AddLabel(rightArea, ResGumps.CellSize, startX, startY);
 
-            int initialX = startX;
             startX += text.Width + 5;
 
             _cellSize = AddHSlider
@@ -2970,46 +3103,6 @@ namespace ClassicUO.Game.UI.Gumps
                 startY,
                 80
             );
-
-
-            startX = initialX;
-            startY += text.Height + 2 + 15;
-
-            _rows = AddInputField
-            (
-                rightArea,
-                startX,
-                startY,
-                50,
-                30,
-                ResGumps.Counter_Rows,
-                50,
-                false,
-                true,
-                30
-            );
-
-            _rows.SetText(_currentProfile.CounterBarRows.ToString());
-
-
-            startX += _rows.Width + 5 + 100;
-
-            _columns = AddInputField
-            (
-                rightArea,
-                startX,
-                startY,
-                50,
-                30,
-                ResGumps.Counter_Columns,
-                50,
-                false,
-                true,
-                30
-            );
-
-            _columns.SetText(_currentProfile.CounterBarColumns.ToString());
-
 
             Add(rightArea, PAGE);
         }
@@ -3457,6 +3550,7 @@ namespace ClassicUO.Game.UI.Gumps
                     _reduceFPSWhenInactive.IsChecked = true;
                     _highlightObjects.IsChecked = true;
                     _enableTopbar.IsChecked = false;
+                    _newTargetSystem.IsChecked = true;
                     _holdDownKeyTab.IsChecked = true;
                     _holdDownKeyAlt.IsChecked = true;
                     _closeAllAnchoredGumpsWithRClick.IsChecked = false;
@@ -3497,6 +3591,7 @@ namespace ClassicUO.Game.UI.Gumps
                     _textFading.IsChecked = true;
                     _enableDragSelect.IsChecked = false;
                     _dragSelectHumanoidsOnly.IsChecked = false;
+                    _dragSelectHostileOnly.IsChecked = false;
                     _showTargetRangeIndicator.IsChecked = false;
                     _customBars.IsChecked = false;
                     _customBarsBBG.IsChecked = false;
@@ -3508,6 +3603,7 @@ namespace ClassicUO.Game.UI.Gumps
                     _use_smooth_boat_movement.IsChecked = false;
                     _hideScreenshotStoredInMessage.IsChecked = false;
                     _use_old_status_gump.IsChecked = false;
+                    _statusGumpBarMutuallyExclusive.IsChecked = true;
                     _auraType.SelectedIndex = 0;
                     _fieldsType.SelectedIndex = 0;
 
@@ -3550,6 +3646,7 @@ namespace ClassicUO.Game.UI.Gumps
                     _enableBlackWhiteEffect.IsChecked = true;
                     Client.Game.Scene.Camera.Zoom = 1f;
                     _currentProfile.DefaultScale = 1f;
+                    _sliderScreenZoom.Value = 0;
                     _lightBar.Value = 0;
                     _enableLight.IsChecked = false;
                     _lightLevelType.SelectedIndex = 0;
@@ -3605,10 +3702,13 @@ namespace ClassicUO.Game.UI.Gumps
                     _hideChatGradient.IsChecked = false;
                     _ignoreGuildMessages.IsChecked = false;
                     _ignoreAllianceMessages.IsChecked = false;
+                    _useAlternateJournal.IsChecked = false;
+                    _partyMessagesOverhead.IsChecked = false;
 
                     break;
 
                 case 8: // combat
+                    _showDPSCheckbox.IsChecked = false;
                     _innocentColorPickerBox.Hue = 0x005A;
                     _friendColorPickerBox.Hue = 0x0044;
                     _crimialColorPickerBox.Hue = 0x03b2;
@@ -3631,7 +3731,7 @@ namespace ClassicUO.Game.UI.Gumps
 
                 case 9: // counters
                     _enableCounters.IsChecked = false;
-                    _highlightOnUse.IsChecked = false;
+                    _highlightOnChange.IsChecked = false;
                     _enableAbbreviatedAmount.IsChecked = false;
                     _columns.SetText("1");
                     _rows.SetText("1");
@@ -3698,6 +3798,7 @@ namespace ClassicUO.Game.UI.Gumps
             _currentProfile.InvulnerableHue = _invulnerableColorPickerBox.Hue;
             _currentProfile.MobileHPType = _hpComboBox.SelectedIndex;
             _currentProfile.MobileHPShowWhen = _hpComboBoxShowWhen.SelectedIndex;
+            _currentProfile.UseNewTargetSystem = _newTargetSystem.IsChecked;
             _currentProfile.HoldDownKeyTab = _holdDownKeyTab.IsChecked;
             _currentProfile.HoldDownKeyAltToCloseAnchored = _holdDownKeyAlt.IsChecked;
 
@@ -3834,10 +3935,36 @@ namespace ClassicUO.Game.UI.Gumps
             _currentProfile.ActivateChatAdditionalButtons = _chatAdditionalButtonsCheckbox.IsChecked;
             _currentProfile.ActivateChatShiftEnterSupport = _chatShiftEnterCheckbox.IsChecked;
             _currentProfile.SaveJournalToFile = _saveJournalCheckBox.IsChecked;
+            _currentProfile.OverheadPartyMessages = _partyMessagesOverhead.IsChecked;
+
+            if (!_maxJournalFilesEnabled.IsChecked)
+            {
+                // if the checkbox is unchecked, ignore the input field and set to -1 (unlimited)
+                _globalProfile.MaxJournalFiles = -1;
+            }
+            else
+            {
+                if (int.TryParse(_maxJournalFiles.Text, out int maxJournalFiles))
+                {
+                    _globalProfile.MaxJournalFiles = maxJournalFiles;
+                }
+                else
+                {
+                    _globalProfile.MaxJournalFiles = -1;
+                }
+            }
+
+            _globalProfile.JournalFileWithSerial = _journalFileWithSerial.IsChecked;
 
             // video
             _currentProfile.EnableDeathScreen = _enableDeathScreen.IsChecked;
             _currentProfile.EnableBlackWhiteEffect = _enableBlackWhiteEffect.IsChecked;
+
+            Settings.GlobalSettings.ScreenScale = GetScreenScale(_sliderScreenZoom.Value);
+            if (Client.Game.ScreenScale != Settings.GlobalSettings.ScreenScale) {
+                Client.Game.ScreenScale = Settings.GlobalSettings.ScreenScale;
+                RecenterGump();
+            }
 
             var camera = Client.Game.Scene.Camera;
             _currentProfile.DefaultScale = camera.Zoom = (_sliderZoom.Value * camera.ZoomStep) + camera.ZoomMin;
@@ -3845,7 +3972,7 @@ namespace ClassicUO.Game.UI.Gumps
             _currentProfile.EnableMousewheelScaleZoom = _zoomCheckbox.IsChecked;
             _currentProfile.RestoreScaleAfterUnpressCtrl = _restorezoomCheckbox.IsChecked;
 
-            if (!CUOEnviroment.IsOutlands && _use_old_status_gump.IsChecked != _currentProfile.UseOldStatusGump)
+            if (_use_old_status_gump.IsChecked != _currentProfile.UseOldStatusGump)
             {
                 StatusGumpBase status = StatusGumpBase.GetStatusGump();
 
@@ -3853,9 +3980,18 @@ namespace ClassicUO.Game.UI.Gumps
 
                 if (status != null)
                 {
-                    status.Dispose();
+                    if (_currentProfile.StatusGumpBarMutuallyExclusive)
+                        status.Dispose();
                     UIManager.Add(StatusGumpBase.AddStatusGump(World, status.ScreenCoordinateX, status.ScreenCoordinateY));
                 }
+            }
+            
+            if (_statusGumpBarMutuallyExclusive.IsChecked != _currentProfile.StatusGumpBarMutuallyExclusive)
+            {
+                var active = _currentProfile.StatusGumpBarMutuallyExclusive = _statusGumpBarMutuallyExclusive.IsChecked;
+
+                if (active && StatusGumpBase.GetStatusGump() != null && UIManager.GetGump<BaseHealthBarGump>(World.Player) is {} bar)
+                    bar.Dispose();
             }
 
 
@@ -3866,7 +4002,9 @@ namespace ClassicUO.Game.UI.Gumps
             {
                 if (vp != null)
                 {
-                    Point n = vp.ResizeGameWindow(new Point(gameWindowSizeWidth, gameWindowSizeHeight));
+                    var s = new Point(Client.Game.ScaleWithDpi(gameWindowSizeWidth), Client.Game.ScaleWithDpi(gameWindowSizeHeight));
+
+                    Point n = vp.ResizeGameWindow(s);
 
                     _gameWindowWidth.SetText(n.X.ToString());
                     _gameWindowHeight.SetText(n.Y.ToString());
@@ -3903,7 +4041,8 @@ namespace ClassicUO.Game.UI.Gumps
                 {
                     if (vp != null)
                     {
-                        n = vp.ResizeGameWindow(new Point(Client.Game.Window.ClientBounds.Width, Client.Game.Window.ClientBounds.Height));
+                        var size = new Point(Client.Game.ClientBounds.Width, Client.Game.ClientBounds.Height);
+                        n = vp.ResizeGameWindow(size);
                         vp.SetGameWindowPosition(new Point(-5, -5));
                         _currentProfile.GameWindowPosition = vp.Location;
                     }
@@ -3964,6 +4103,7 @@ namespace ClassicUO.Game.UI.Gumps
             _currentProfile.HideChatGradient = _hideChatGradient.IsChecked;
             _currentProfile.IgnoreGuildMessages = _ignoreGuildMessages.IsChecked;
             _currentProfile.IgnoreAllianceMessages = _ignoreAllianceMessages.IsChecked;
+            _currentProfile.UseAlternateJournal = _useAlternateJournal.IsChecked;
 
             // fonts
             _currentProfile.ForceUnicodeJournal = _forceUnicodeJournal.IsChecked;
@@ -3996,6 +4136,7 @@ namespace ClassicUO.Game.UI.Gumps
             _currentProfile.EnabledSpellHue = _spellColoringCheckbox.IsChecked;
             _currentProfile.EnabledSpellFormat = _spellFormatCheckbox.IsChecked;
             _currentProfile.SpellDisplayFormat = _spellFormatBox.Text;
+            _currentProfile.ShowDPSWithDamageNumbers = _showDPSCheckbox.IsChecked;
 
             // macros
             World.Macros.Save();
@@ -4006,23 +4147,9 @@ namespace ClassicUO.Game.UI.Gumps
             _currentProfile.CounterBarEnabled = _enableCounters.IsChecked;
             _currentProfile.CounterBarCellSize = _cellSize.Value;
 
-            if (!int.TryParse(_rows.Text, out int v))
-            {
-                v = 1;
-                _rows.SetText("1");
-            }
+            _currentProfile.CounterBarHighlightOnChange = _highlightOnChange.IsChecked;
 
-            _currentProfile.CounterBarRows = v;
-
-            if (!int.TryParse(_columns.Text, out v))
-            {
-                v = 1;
-                _columns.SetText("1");
-            }
-            _currentProfile.CounterBarColumns = v;
-            _currentProfile.CounterBarHighlightOnUse = _highlightOnUse.IsChecked;
-
-            if (!int.TryParse(_highlightAmount.Text, out v))
+            if (!int.TryParse(_highlightAmount.Text, out int v))
             {
                 v = 5;
                 _highlightAmount.SetText("5");
@@ -4040,9 +4167,6 @@ namespace ClassicUO.Game.UI.Gumps
 
             CounterBarGump counterGump = UIManager.GetGump<CounterBarGump>();
 
-            counterGump?.SetLayout(_currentProfile.CounterBarCellSize, _currentProfile.CounterBarRows, _currentProfile.CounterBarColumns);
-
-
             if (before != _currentProfile.CounterBarEnabled)
             {
                 if (counterGump == null)
@@ -4056,9 +4180,7 @@ namespace ClassicUO.Game.UI.Gumps
                                 World,
                                 200,
                                 200,
-                                _currentProfile.CounterBarCellSize,
-                                _currentProfile.CounterBarRows,
-                                _currentProfile.CounterBarColumns
+                                _currentProfile.CounterBarCellSize
                             )
                         );
                     }
@@ -4067,6 +4189,10 @@ namespace ClassicUO.Game.UI.Gumps
                 {
                     counterGump.IsEnabled = counterGump.IsVisible = _currentProfile.CounterBarEnabled;
                 }
+            }
+            else if (counterGump != null)
+            {
+                counterGump.SetCellSize(_currentProfile.CounterBarCellSize);
             }
 
             // experimental
@@ -4095,6 +4221,8 @@ namespace ClassicUO.Game.UI.Gumps
             _currentProfile.EnableDragSelect = _enableDragSelect.IsChecked;
             _currentProfile.DragSelectModifierKey = _dragSelectModifierKey.SelectedIndex;
             _currentProfile.DragSelectHumanoidsOnly = _dragSelectHumanoidsOnly.IsChecked;
+            _currentProfile.DragSelectHostileOnly = _dragSelectHostileOnly.IsChecked;
+
             _currentProfile.DragSelectStartX = _dragSelectStartX.Value;
             _currentProfile.DragSelectStartY = _dragSelectStartY.Value;
             _currentProfile.DragSelectAsAnchor = _dragSelectAsAnchor.IsChecked;
@@ -4232,34 +4360,41 @@ namespace ClassicUO.Game.UI.Gumps
             _gameWindowHeight.SetText(camera.Bounds.Height.ToString());
         }
 
-        public override bool Draw(UltimaBatcher2D batcher, int x, int y)
+        public override bool AddToRenderLists(RenderLists renderLists, int x, int y, ref float layerDepthRef)
         {
+            float layerDepth = layerDepthRef;
             Vector3 hueVector = ShaderHueTranslator.GetHueVector(0);
 
-            batcher.Draw
-            (
-                LogoTexture,
-                new Rectangle
+            renderLists.AddGumpNoAtlas(batcher =>
+            {
+                batcher.Draw
                 (
-                    x + 190,
-                    y + 20,
-                    WIDTH - 250,
-                    400
-                ),
-                hueVector
-            );
+                    LogoTexture,
+                    new Rectangle
+                    (
+                        x + 190,
+                        y + 20,
+                        WIDTH - 250,
+                        400
+                    ),
+                    hueVector,
+                    layerDepth
+                );
 
-            batcher.DrawRectangle
-            (
-                SolidColorTextureCache.GetTexture(Color.Gray),
-                x,
-                y,
-                Width,
-                Height,
-                hueVector
-            );
+                batcher.DrawRectangle
+                (
+                    SolidColorTextureCache.GetTexture(Color.Gray),
+                    x,
+                    y,
+                    Width,
+                    Height,
+                    hueVector,
+                    layerDepth
+                );
+                return true;
+            });
 
-            return base.Draw(batcher, x, y);
+            return base.AddToRenderLists(renderLists, x, y, ref layerDepthRef);
         }
 
         private InputField AddInputField
@@ -4546,7 +4681,7 @@ namespace ClassicUO.Game.UI.Gumps
                 _databox.WantUpdateSize = true;
             }
 
-            public override void Add(Control c, int page = 0)
+            public override T Add<T>(T c, int page = 0)
             {
                 int i = _databox.Children.Count - 1;
                 int bottom = 0;
@@ -4573,6 +4708,8 @@ namespace ClassicUO.Game.UI.Gumps
                 _databox.WantUpdateSize = true;
 
                 Height += c.Height + 2;
+
+                return c;
             }
         }
 
@@ -4591,7 +4728,7 @@ namespace ClassicUO.Game.UI.Gumps
 
                 for (byte i = 0; i < max_font; i++)
                 {
-                    if (FontsLoader.Instance.UnicodeFontExists(i))
+                    if (Client.Game.UO.FileManager.Fonts.UnicodeFontExists(i))
                     {
                         Add
                         (
@@ -4673,7 +4810,7 @@ namespace ClassicUO.Game.UI.Gumps
                     maxCharsCount,
                     maxWidthText,
                     unicode,
-                    FontStyle.BlackBorder,
+                    FontStyle.Cropped | FontStyle.BlackBorder,
                     hue
                 )
                 {
@@ -4688,15 +4825,21 @@ namespace ClassicUO.Game.UI.Gumps
                 Add(_textbox);
             }
 
-            public override bool Draw(UltimaBatcher2D batcher, int x, int y)
+            public override bool AddToRenderLists(RenderLists renderLists, int x, int y, ref float layerDepthRef)
             {
-                if (batcher.ClipBegin(x, y, Width, Height))
+                float layerDepth = layerDepthRef;
+                renderLists.AddGumpNoAtlas(batcher =>
                 {
-                    base.Draw(batcher, x, y);
+                    if (batcher.ClipBegin(x, y, Width, Height))
+                    {
+                        RenderLists childRenderLists = new();
+                        base.AddToRenderLists(childRenderLists, x, y, ref layerDepth);
 
-                    batcher.ClipEnd();
-                }
-
+                        childRenderLists.DrawRenderLists(batcher, sbyte.MaxValue);
+                        batcher.ClipEnd();
+                    }
+                    return true;
+                });
                 return true;
             }
 
@@ -4720,6 +4863,36 @@ namespace ClassicUO.Game.UI.Gumps
             {
                 _textbox.SetText(text);
             }
+        }
+
+        private float GetScreenScale(int zoom_slider_value) {
+            float screen_zoom_steps = SCREEN_ZOOM_STEPS;
+            float x = zoom_slider_value;
+
+            float screen_scale;
+            if (zoom_slider_value > 0) {
+                screen_scale = x/screen_zoom_steps + 1.0f;
+            } else {
+                screen_scale = 1.0f + 0.025f * x;
+            }
+            return screen_scale;
+        }
+
+        private int GetScreenZoom(float screen_scale) {
+            float screen_zoom_steps = SCREEN_ZOOM_STEPS;
+
+            int zoom_slider_value;
+            if (screen_scale > 1f) {
+                zoom_slider_value = (int)Math.Round(screen_zoom_steps * (screen_scale - 1f));
+            } else {
+                zoom_slider_value = (int)Math.Round(-screen_zoom_steps * 2 * (1f - screen_scale));
+            }
+            return zoom_slider_value;
+        }
+
+        private void RecenterGump() {
+            X = (Client.Game.ClientBounds.Width >> 1) - WIDTH/2;
+            Y = (Client.Game.ClientBounds.Height >> 1) - HEIGHT/2;
         }
     }
 }

@@ -1,45 +1,13 @@
-#region license
+// SPDX-License-Identifier: BSD-2-Clause
 
-// Copyright (c) 2024, andreakarasho
-// All rights reserved.
-// 
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. All advertising materials mentioning features or use of this software
-//    must display the following acknowledgement:
-//    This product includes software developed by andreakarasho - https://github.com/andreakarasho
-// 4. Neither the name of the copyright holder nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-// 
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ''AS IS'' AND ANY
-// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY
-// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-#endregion
-
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using ClassicUO.Input;
 using ClassicUO.Assets;
-using ClassicUO.Renderer;
+using ClassicUO.Game.Scenes;
+using ClassicUO.Input;
 using ClassicUO.Utility;
 using ClassicUO.Utility.Logging;
 using ClassicUO.Utility.Platforms;
 using Microsoft.Xna.Framework;
+using System.Collections.Generic;
 
 namespace ClassicUO.Game.UI.Controls
 {
@@ -188,30 +156,29 @@ namespace ClassicUO.Game.UI.Controls
                 );
             }
 
-            if (HasScrollbar)
+
+            if (UseFlagScrollbar)
             {
-                if (UseFlagScrollbar)
+                _scrollBar = new ScrollFlag
                 {
-                    _scrollBar = new ScrollFlag
-                    {
-                        Location = new Point(Width - 14, 0)
-                    };
-                }
-                else
-                {
-                    _scrollBar = new ScrollBar(Width - 14, 0, Height);
-                }
-
-                _scrollBar.Height = Height;
-                _scrollBar.MinValue = 0;
-
-                _scrollBar.MaxValue = /* _gameText.Height*/ /* Children.Sum(s => s.Height) - Height +*/
-                    _gameText.Height - Height + (HasBackground ? 8 : 0);
-
-                ScrollY = _scrollBar.Value;
-
-                Add(_scrollBar);
+                    Location = new Point(Width - 14, 0),
+                };
             }
+            else
+            {
+                _scrollBar = new ScrollBar(Width - 14, 0, Height);
+            }
+
+            _scrollBar.IsVisible = HasScrollbar;
+            _scrollBar.Height = Height;
+            _scrollBar.MinValue = 0;
+
+            _scrollBar.MaxValue = /* _gameText.Height*/ /* Children.Sum(s => s.Height) - Height +*/
+                _gameText.Height - Height + (HasBackground ? 8 : 0);
+
+            ScrollY = _scrollBar.Value;
+
+            Add(_scrollBar);
 
             //if (Width != _gameText.Width)
             //    Width = _gameText.Width;
@@ -219,11 +186,6 @@ namespace ClassicUO.Game.UI.Controls
 
         protected override void OnMouseWheel(MouseEventType delta)
         {
-            if (!HasScrollbar)
-            {
-                return;
-            }
-
             switch (delta)
             {
                 case MouseEventType.WheelScrollUp:
@@ -240,52 +202,59 @@ namespace ClassicUO.Game.UI.Controls
 
         public override void Update()
         {
-            if (HasScrollbar)
+            if (WantUpdateSize)
             {
-                if (WantUpdateSize)
-                {
-                    _scrollBar.Height = Height;
-                    _scrollBar.MinValue = 0;
+                _scrollBar.Height = Height;
+                _scrollBar.MinValue = 0;
 
-                    _scrollBar.MaxValue = /* _gameText.Height*/ /*Children.Sum(s => s.Height) - Height */
-                        _gameText.Height - Height + (HasBackground ? 8 : 0);
+                _scrollBar.MaxValue = /* _gameText.Height*/ /*Children.Sum(s => s.Height) - Height */
+                    _gameText.Height - Height + (HasBackground ? 8 : 0);
 
-                    //_scrollBar.IsVisible = _scrollBar.MaxValue > _scrollBar.MinValue;
-                    WantUpdateSize = false;
-                }
-
-                ScrollY = _scrollBar.Value;
+                //_scrollBar.IsVisible = _scrollBar.MaxValue > _scrollBar.MinValue;
+                WantUpdateSize = false;
             }
 
+            ScrollY = _scrollBar.Value;
             base.Update();
         }
 
-        public override bool Draw(UltimaBatcher2D batcher, int x, int y)
+        public override bool AddToRenderLists(RenderLists renderLists, int x, int y, ref float layerDepthRef)
         {
+            float layerDepth = layerDepthRef;
             if (IsDisposed)
             {
                 return false;
             }
+            renderLists.AddGumpNoAtlas(
+                batcher =>
+                {
+                    if (batcher.ClipBegin(x, y, Width, Height))
+                    {
+                        RenderLists childRenderLists = new();
 
-            if (batcher.ClipBegin(x, y, Width, Height))
-            {
-                base.Draw(batcher, x, y);
+                        base.AddToRenderLists(childRenderLists, x, y, ref layerDepth);
 
-                int offset = HasBackground ? 4 : 0;
+                        childRenderLists.DrawRenderLists(batcher, sbyte.MaxValue);
 
-                _gameText.Draw
-                (
-                    batcher,
-                    x + offset, 
-                    y + offset,
-                    ScrollX,
-                    ScrollY,
-                    Width + ScrollX,
-                    Height + ScrollY
-                );
+                        int offset = HasBackground ? 4 : 0;
 
-                batcher.ClipEnd();
-            }
+                        _gameText.Draw
+                        (
+                            batcher,
+                            x + offset,
+                            y + offset,
+                            ScrollX,
+                            ScrollY,
+                            Width + ScrollX,
+                            Height + ScrollY,
+                            layerDepth
+                        );
+
+                        batcher.ClipEnd();
+                    }
+                    return true;
+                }
+            );
 
 
             return true;
@@ -302,8 +271,8 @@ namespace ClassicUO.Game.UI.Controls
                         WebLinkRect link = _gameText.Links[i];
 
                         bool inbounds = link.Bounds.Contains(x, (_scrollBar == null ? 0 : _scrollBar.Value) + y);
-                        
-                        if (inbounds && FontsLoader.Instance.GetWebLink(link.LinkID, out WebLink result))
+
+                        if (inbounds && Client.Game.UO.FileManager.Fonts.GetWebLink(link.LinkID, out WebLink result))
                         {
                             Log.Info("LINK CLICKED: " + result.Link);
 

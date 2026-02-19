@@ -1,59 +1,26 @@
-﻿#region license
-
-// Copyright (c) 2024, andreakarasho
-// All rights reserved.
-// 
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. All advertising materials mentioning features or use of this software
-//    must display the following acknowledgement:
-//    This product includes software developed by andreakarasho - https://github.com/andreakarasho
-// 4. Neither the name of the copyright holder nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-// 
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ''AS IS'' AND ANY
-// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY
-// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-#endregion
+﻿// SPDX-License-Identifier: BSD-2-Clause
 
 using ClassicUO.IO;
 using ClassicUO.Utility;
 using ClassicUO.Utility.Logging;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace ClassicUO.Assets
 {
-    public class ClilocLoader : UOFileLoader
+    public sealed class ClilocLoader : UOFileLoader
     {
-        private static ClilocLoader _instance;
+        private const string MISSING_CLILOC_TEXT = "MegaCliloc: missing {0} [~1_val~] [~2_val~]";
         private string _cliloc;
         private readonly Dictionary<int, string> _entries = new Dictionary<int, string>();
 
-        private ClilocLoader()
+        public ClilocLoader(UOFileManager fileManager) : base(fileManager)
         {
         }
 
-        public static ClilocLoader Instance => _instance ?? (_instance = new ClilocLoader());
-
-        public Task Load(string lang)
+        public void Load(string lang)
         {
             if (string.IsNullOrEmpty(lang))
             {
@@ -63,108 +30,65 @@ namespace ClassicUO.Assets
             _cliloc = $"Cliloc.{lang}";
             Log.Trace($"searching for: '{_cliloc}'");
 
-            if (!File.Exists(UOFileManager.GetUOFilePath(_cliloc)))
+            if (!File.Exists(FileManager.GetUOFilePath(_cliloc)))
             {
                 Log.Warn($"'{_cliloc}' not found. Rolled back to Cliloc.enu");
 
                 _cliloc = "Cliloc.enu";
             }
 
-            return Load();
+            Load();
         }
 
-        public override Task Load()
+        public override void Load()
         {
-            return Task.Run
-            (
-                () =>
-                {
-                    if (string.IsNullOrEmpty(_cliloc))
-                    {
-                        _cliloc = "Cliloc.enu";
-                    }
+            if (string.IsNullOrEmpty(_cliloc))
+            {
+                _cliloc = "Cliloc.enu";
+            }
 
-                    string path = UOFileManager.GetUOFilePath(_cliloc);
+            string path = FileManager.GetUOFilePath(_cliloc);
 
-                    if (!File.Exists(path))
-                    {
-                        Log.Error($"cliloc not found: '{path}'");
-                        return;
-                    }
+            if (!File.Exists(path))
+            {
+                Log.Error($"cliloc not found: '{path}'");
+                return;
+            }
 
-                    if (string.Compare(_cliloc, "cliloc.enu", StringComparison.InvariantCultureIgnoreCase) != 0)
-                    { 
-                        string enupath = UOFileManager.GetUOFilePath("Cliloc.enu");
+            if (string.Compare(_cliloc, "cliloc.enu", StringComparison.InvariantCultureIgnoreCase) != 0)
+            {
+                string enupath = FileManager.GetUOFilePath("Cliloc.enu");
+                ReadCliloc(enupath);
+            }
 
-                        using (BinaryReader reader = new BinaryReader(new FileStream(enupath, FileMode.Open, FileAccess.Read)))
-                        {
-                            reader.ReadInt32();
-                            reader.ReadInt16();
+            ReadCliloc(path);
+        }
 
-                            byte[] buffer = System.Buffers.ArrayPool<byte>.Shared.Rent(1024);
+        void ReadCliloc(string path)
+        {
+            using var fileStream = new FileStream(path, FileMode.Open, FileAccess.Read);
 
-                            try
-                            {
-                                while (reader.BaseStream.Length != reader.BaseStream.Position)
-                                {
-                                    int number = reader.ReadInt32();
-                                    byte flag = reader.ReadByte();
-                                    int length = reader.ReadInt16();
+            int bytesRead;
+            var totalRead = 0;
+            var buf = new byte[fileStream.Length];
+            while ((bytesRead = fileStream.Read(buf, totalRead, Math.Min(4096, buf.Length - totalRead))) > 0)
+                totalRead += bytesRead;
 
-                                    if (length > buffer.Length)
-                                    {
-                                        System.Buffers.ArrayPool<byte>.Shared.Return(buffer);
+            var output = buf[3] == 0x8E /*|| FileManager.Version >= ClientVersion.CV_7010400*/ ? BwtDecompress.Decompress(buf) : buf;
 
-                                        buffer = System.Buffers.ArrayPool<byte>.Shared.Rent((length + 1023) & ~1023);
-                                    }
+            var reader = new StackDataReader(output);
+            reader.ReadInt32LE();
+            reader.ReadInt16LE();
 
-                                    reader.Read(buffer, 0, length);
-                                    string text = string.Intern(Encoding.UTF8.GetString(buffer, 0, length));
+            while (reader.Remaining > 0)
+            {
+                var number = reader.ReadInt32LE();
+                var flag = reader.ReadUInt8();
+                var length = reader.ReadInt16LE();
+                var text = string.Intern(reader.ReadUTF8(length));
 
-                                    _entries[number] = text;
-                                }
-                            }
-                            finally
-                            {
-                                System.Buffers.ArrayPool<byte>.Shared.Return(buffer);
-                            }
-                        }
-                    }
-
-                    using (BinaryReader reader = new BinaryReader(new FileStream(path, FileMode.Open, FileAccess.Read)))
-                    {
-                        reader.ReadInt32();
-                        reader.ReadInt16();
-                        byte[] buffer = System.Buffers.ArrayPool<byte>.Shared.Rent(1024);
-
-                        try
-                        {
-                            while (reader.BaseStream.Length != reader.BaseStream.Position)
-                            {
-                                int number = reader.ReadInt32();
-                                byte flag = reader.ReadByte();
-                                int length = reader.ReadInt16();
-
-                                if (length > buffer.Length)
-                                {
-                                    System.Buffers.ArrayPool<byte>.Shared.Return(buffer);
-
-                                    buffer = System.Buffers.ArrayPool<byte>.Shared.Rent((length + 1023) & ~1023);
-                                }
-
-                                reader.Read(buffer, 0, length);
-                                string text = string.Intern(Encoding.UTF8.GetString(buffer, 0, length));
-
-                                _entries[number] = text;
-                            }
-                        }
-                        finally
-                        {
-                            System.Buffers.ArrayPool<byte>.Shared.Return(buffer);
-                        }
-                    }
-                }
-            );
+                _entries[number] = text;
+            }
         }
 
         public override void ClearResources()
@@ -172,50 +96,31 @@ namespace ClassicUO.Assets
             _entries.Clear();
         }
 
-        public string GetString(int number)
+        [return: NotNull]
+        public string GetString(int clilocNum, string fallback = null)
         {
-            _entries.TryGetValue(number, out string text);
+            _entries.TryGetValue(clilocNum, out string text);
+
+            return text ?? fallback ?? string.Format(MISSING_CLILOC_TEXT, clilocNum);
+        }
+
+        [return: NotNull]
+        public string GetString(int clilocNum, bool camelcase, string fallback = "")
+        {
+            string text = GetString(clilocNum, fallback);
+
+            if (camelcase)
+            {
+                return StringHelper.CapitalizeAllWords(text);
+            }
 
             return text;
         }
 
-        public string GetString(int number, string replace)
-        {
-            string s = GetString(number);
-
-            if (string.IsNullOrEmpty(s))
-            {
-                s = replace;
-            }
-
-            return s;
-        }
-
-        public string GetString(int number, bool camelcase, string replace = "")
-        {
-            string s = GetString(number);
-
-            if (string.IsNullOrEmpty(s) && !string.IsNullOrEmpty(replace))
-            {
-                s = replace;
-            }
-
-            if (camelcase && !string.IsNullOrEmpty(s))
-            {
-                s = StringHelper.CapitalizeAllWords(s);
-            }
-
-            return s;
-        }
-
+        [return: NotNull]
         public unsafe string Translate(int clilocNum, string arg = "", bool capitalize = false)
         {
             string baseCliloc = GetString(clilocNum);
-
-            if (baseCliloc == null)
-            {
-                return null;
-            }
 
             if (arg == null)
             {

@@ -1,35 +1,6 @@
-﻿#region license
+﻿// SPDX-License-Identifier: BSD-2-Clause
 
-// Copyright (c) 2024, andreakarasho
-// All rights reserved.
-// 
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. All advertising materials mentioning features or use of this software
-//    must display the following acknowledgement:
-//    This product includes software developed by andreakarasho - https://github.com/andreakarasho
-// 4. Neither the name of the copyright holder nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-// 
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ''AS IS'' AND ANY
-// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY
-// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-#endregion
-
+using System;
 using System.IO;
 using ClassicUO.Utility;
 using Microsoft.Xna.Framework;
@@ -38,27 +9,40 @@ namespace ClassicUO.Configuration
 {
     internal static class ProfileManager
     {
+        public static GlobalProfile GlobalProfile { get; private set; }
         public static Profile CurrentProfile { get; private set; }
         public static string ProfilePath { get; private set; }
 
+        private static string _rootPath;
+        private static string RootPath
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(_rootPath))
+                {
+                    if (string.IsNullOrWhiteSpace(Settings.GlobalSettings.ProfilesPath))
+                    {
+                        _rootPath = Path.Combine(CUOEnviroment.ExecutablePath, "Data", "Profiles");
+                    }
+                    else
+                    {
+                        _rootPath = Settings.GlobalSettings.ProfilesPath;
+                    }
+                }
+
+                return _rootPath;
+            }
+        }
+
         public static void Load(string servername, string username, string charactername)
         {
-            string rootpath;
+            GlobalProfile = ConfigurationResolver.Load<GlobalProfile>(Path.Combine(RootPath, "globalprofile.json"), ProfileJsonContext.DefaultToUse.GlobalProfile) ?? new GlobalProfile();
 
-            if (string.IsNullOrWhiteSpace(Settings.GlobalSettings.ProfilesPath))
-            {
-                rootpath = Path.Combine(CUOEnviroment.ExecutablePath, "Data", "Profiles");
-            }
-            else
-            {
-                rootpath = Settings.GlobalSettings.ProfilesPath;
-            }
-
-            string path = FileSystemHelper.CreateFolderIfNotExists(rootpath, username, servername, charactername);
+            string path = FileSystemHelper.CreateFolderIfNotExists(RootPath, username, servername, charactername);
             string fileToLoad = Path.Combine(path, "profile.json");
 
             ProfilePath = path;
-            CurrentProfile = ConfigurationResolver.Load<Profile>(fileToLoad, ProfileJsonContext.DefaultToUse.Profile) ?? new Profile();
+            CurrentProfile = ConfigurationResolver.Load<Profile>(fileToLoad, ProfileJsonContext.DefaultToUse.Profile) ?? NewFromDefault();
 
             CurrentProfile.Username = username;
             CurrentProfile.ServerName = servername;
@@ -67,6 +51,15 @@ namespace ClassicUO.Configuration
             ValidateFields(CurrentProfile);
         }
 
+        public static void SetProfileAsDefault(Profile profile)
+        {
+            Save(profile, RootPath, "default.json");
+        }
+
+        public static Profile NewFromDefault()
+        {
+            return ConfigurationResolver.Load<Profile>(Path.Combine(RootPath, "default.json"), ProfileJsonContext.DefaultToUse.Profile) ?? new Profile();
+        }
 
         private static void ValidateFields(Profile profile)
         {
@@ -103,7 +96,17 @@ namespace ClassicUO.Configuration
 
         public static void UnLoadProfile()
         {
+            GlobalProfile = null;
             CurrentProfile = null;
+        }
+
+        internal static void Save(Profile profile, string path, string filename = "profile.json")
+        {
+            ConfigurationResolver.Save(profile, Path.Combine(path, filename), ProfileJsonContext.DefaultToUse.Profile);
+            if (GlobalProfile != null)
+            {
+                ConfigurationResolver.Save(GlobalProfile, Path.Combine(RootPath, "globalprofile.json"), ProfileJsonContext.DefaultToUse.GlobalProfile);
+            }
         }
     }
 }

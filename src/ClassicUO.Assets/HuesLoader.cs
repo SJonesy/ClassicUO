@@ -1,34 +1,4 @@
-﻿#region license
-
-// Copyright (c) 2024, andreakarasho
-// All rights reserved.
-// 
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. All advertising materials mentioning features or use of this software
-//    must display the following acknowledgement:
-//    This product includes software developed by andreakarasho - https://github.com/andreakarasho
-// 4. Neither the name of the copyright holder nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-// 
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ''AS IS'' AND ANY
-// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY
-// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-#endregion
+﻿// SPDX-License-Identifier: BSD-2-Clause
 
 using ClassicUO.IO;
 using ClassicUO.Utility;
@@ -39,15 +9,11 @@ using System.Threading.Tasks;
 
 namespace ClassicUO.Assets
 {
-    public class HuesLoader : UOFileLoader
+    public sealed class HuesLoader : UOFileLoader
     {
-        private static HuesLoader _instance;
-
-        private HuesLoader()
+        public HuesLoader(UOFileManager fileManager) : base(fileManager)
         {
         }
-
-        public static HuesLoader Instance => _instance ?? (_instance = new HuesLoader());
 
         public HuesGroup[] HuesRange { get; private set; }
 
@@ -57,44 +23,30 @@ namespace ClassicUO.Assets
 
         public ushort[] RadarCol { get; private set; }
 
-        public override unsafe Task Load()
+        public override unsafe void Load()
         {
-            return Task.Run
-            (
-                () =>
-                {
-                    string path = UOFileManager.GetUOFilePath("hues.mul");
+            var path = FileManager.GetUOFilePath("hues.mul");
 
-                    FileSystemHelper.EnsureFileExists(path);
+            FileSystemHelper.EnsureFileExists(path);
 
-                    UOFileMul file = new UOFileMul(path);
-                    int groupSize = Marshal.SizeOf<HuesGroup>();
-                    int entrycount = (int) file.Length / groupSize;
-                    HuesCount = entrycount * 8;
-                    HuesRange = new HuesGroup[entrycount];
-                    ulong addr = (ulong) file.StartAddress;
+            using var file = new UOFileMul(path);
+            int groupSize = Unsafe.SizeOf<HuesGroup>();
+            int entrycount = (int) file.Length / groupSize;
+            HuesCount = entrycount * 8;
+            HuesRange = new HuesGroup[entrycount];
 
-                    for (int i = 0; i < entrycount; i++)
-                    {
-                        HuesRange[i] = Marshal.PtrToStructure<HuesGroup>((IntPtr) (addr + (ulong) (i * groupSize)));
-                    }
+            for (int i = 0; i < entrycount; i++)
+            {
+                HuesRange[i] = file.Read<HuesGroup>();
+            }
 
-                    path = UOFileManager.GetUOFilePath("radarcol.mul");
+            path = FileManager.GetUOFilePath("radarcol.mul");
 
-                    FileSystemHelper.EnsureFileExists(path);
+            FileSystemHelper.EnsureFileExists(path);
 
-                    UOFileMul radarcol = new UOFileMul(path);
-                    RadarCol = new ushort[(int)(radarcol.Length >> 1)];
-
-                    fixed (ushort* ptr = RadarCol)
-                    {
-                        Unsafe.CopyBlockUnaligned((void*)(byte*)ptr, radarcol.PositionAddress.ToPointer(), (uint)radarcol.Length);
-                    }
-                    
-                    file.Dispose();
-                    radarcol.Dispose();
-                }
-            );
+            using var radarcol = new UOFileMul(path);
+            RadarCol = new ushort[radarcol.Length / sizeof(ushort)];
+            radarcol.Read(MemoryMarshal.AsBytes<ushort>(RadarCol.AsSpan()));
         }
 
         public float[] CreateHuesPalette()
@@ -288,44 +240,51 @@ namespace ClassicUO.Assets
         }
     }
 
+
+    [InlineArray(32)]
+    public struct ColorTableArray
+    {
+        private ushort _a0;
+    }
+
+    [InlineArray(8)]
+    public struct HuesBlockArray
+    {
+        private HuesBlock _a0;
+    }
+
+
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     public struct HuesBlock
     {
-        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 32)]
-        public ushort[] ColorTable;
+        public ColorTableArray ColorTable;
         public ushort TableStart;
         public ushort TableEnd;
-        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 20)]
-        public char[] Name;
+        public unsafe fixed byte Name[20];
     }
 
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     public struct HuesGroup
     {
         public uint Header;
-        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 8)]
-        public HuesBlock[] Entries;
+        public HuesBlockArray Entries;
     }
 
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    public readonly struct VerdataHuesBlock
+    public struct VerdataHuesBlock
     {
-        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 32)]
-        public readonly ushort[] ColorTable;
-        public readonly ushort TableStart;
-        public readonly ushort TableEnd;
-        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 20)]
-        public readonly char[] Name;
-        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 32)]
-        public readonly ushort[] Unk;
+        public ColorTableArray ColorTable;
+        public ushort TableStart;
+        public ushort TableEnd;
+        public unsafe fixed byte Name[20];
+        public unsafe fixed ushort Unk[20];
     }
 
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    public readonly struct VerdataHuesGroup
+    public struct VerdataHuesGroup
     {
         public readonly uint Header;
-        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 8)]
-        public readonly VerdataHuesBlock[] Entries;
+        public HuesBlockArray Entries;
     }
 
     public struct FloatHues

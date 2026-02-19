@@ -1,41 +1,11 @@
-﻿#region license
+﻿// SPDX-License-Identifier: BSD-2-Clause
 
-// Copyright (c) 2024, andreakarasho
-// All rights reserved.
-// 
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. All advertising materials mentioning features or use of this software
-//    must display the following acknowledgement:
-//    This product includes software developed by andreakarasho - https://github.com/andreakarasho
-// 4. Neither the name of the copyright holder nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-// 
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ''AS IS'' AND ANY
-// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY
-// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-#endregion
-
-using System;
 using ClassicUO.Configuration;
 using ClassicUO.Input;
 using ClassicUO.Renderer;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using System;
 
 namespace ClassicUO.Game.Managers
 {
@@ -46,7 +16,9 @@ namespace ClassicUO.Game.Managers
             () => new BlendState
             {
                 ColorSourceBlend = Blend.SourceAlpha,
-                ColorDestinationBlend = Blend.InverseSourceAlpha
+                AlphaSourceBlend = Blend.SourceAlpha,
+                ColorDestinationBlend = Blend.InverseSourceAlpha,
+                AlphaDestinationBlend = Blend.InverseSourceAlpha
             }
         );
 
@@ -60,6 +32,8 @@ namespace ClassicUO.Game.Managers
 
         public void Draw(UltimaBatcher2D batcher, int x, int y, ushort hue, float depth)
         {
+            int yBump = -5;
+
             if (_texture == null || _texture.IsDisposed)
             {
                 var w = _radius * 2;
@@ -77,8 +51,9 @@ namespace ClassicUO.Game.Managers
             Vector3 hueVec = ShaderHueTranslator.GetHueVector(hue, false, 1);
 
             batcher.SetBlendState(_blend.Value);
-            batcher.Draw(_texture, new Vector2(x, y), null, hueVec, 0f, Vector2.Zero, 1f, SpriteEffects.None, depth);
-            batcher.SetBlendState(null);
+            batcher.Draw(_texture, new Rectangle(x, y + yBump, _radius * 2, _radius - yBump), new Rectangle(0, 0, _radius * 2, _radius - yBump), hueVec, depth + 1f);
+            batcher.Draw(_texture, new Rectangle(x, y + _radius, _radius * 2, _radius + yBump), new Rectangle(0, _radius - yBump, _radius * 2, _radius + yBump), hueVec, depth + 1.49f);
+            batcher.SetBlendState(BlendState.AlphaBlend);
         }
 
         private Color[] GenerateBlendedCircleColors(int radius)
@@ -102,7 +77,7 @@ namespace ClassicUO.Game.Managers
 
                     var opacityFactor = 1f - distance / (float)radius;
 
-                    blendedColors[x + y * width] = new Color(opacityFactor, opacityFactor, opacityFactor, opacityFactor);
+                    blendedColors[x + y * width] = Color.White * opacityFactor;
                 }
             }
 
@@ -127,7 +102,7 @@ namespace ClassicUO.Game.Managers
         public AuraManager(World world)
         {
             _world = world;
-            _aura = new Aura(30);
+            _aura = new Aura(40);
         }
 
         public bool IsEnabled

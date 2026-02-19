@@ -1,46 +1,16 @@
-﻿#region license
+﻿// SPDX-License-Identifier: BSD-2-Clause
 
-// Copyright (c) 2024, andreakarasho
-// All rights reserved.
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. All advertising materials mentioning features or use of this software
-//    must display the following acknowledgement:
-//    This product includes software developed by andreakarasho - https://github.com/andreakarasho
-// 4. Neither the name of the copyright holder nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ''AS IS'' AND ANY
-// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY
-// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-#endregion
-
+using ClassicUO.Assets;
 using ClassicUO.Configuration;
 using ClassicUO.Game.Managers;
 using ClassicUO.Game.Scenes;
 using ClassicUO.Game.UI.Controls;
 using ClassicUO.Input;
-using ClassicUO.Assets;
 using ClassicUO.Renderer;
 using ClassicUO.Resources;
 using ClassicUO.Utility;
 using Microsoft.Xna.Framework;
-using SDL2;
+using SDL3;
 
 namespace ClassicUO.Game.UI.Gumps.Login
 {
@@ -672,11 +642,11 @@ namespace ClassicUO.Game.UI.Gumps.Login
                 }
             }
 
-            protected override void DrawCaret(UltimaBatcher2D batcher, int x, int y)
+            protected override void DrawCaret(UltimaBatcher2D batcher, int x, int y, float layerDepth)
             {
                 if (HasKeyboardFocus)
                 {
-                    _rendererCaret.Draw(batcher, x + _caretScreenPosition.X, y + _caretScreenPosition.Y);
+                    _rendererCaret.Draw(batcher, x + _caretScreenPosition.X, y + _caretScreenPosition.Y, layerDepth);
                 }
             }
 
@@ -709,7 +679,7 @@ namespace ClassicUO.Game.UI.Gumps.Login
                 base.OnTextInput(c);
             }
 
-            protected override void OnTextChanged()
+            protected override void OnTextChanged(string previousText)
             {
                 if (Text.Length > 0)
                 {
@@ -720,7 +690,7 @@ namespace ClassicUO.Game.UI.Gumps.Login
                     _rendererText.Text = string.Empty;
                 }
 
-                base.OnTextChanged();
+                base.OnTextChanged(previousText);
                 UpdateCaretScreenPosition();
             }
 
@@ -736,17 +706,24 @@ namespace ClassicUO.Game.UI.Gumps.Login
                 _caretScreenPosition = _rendererText.GetCaretPosition(Stb.CursorIndex);
             }
 
-            public override bool Draw(UltimaBatcher2D batcher, int x, int y)
+            public override bool AddToRenderLists(RenderLists renderLists, int x, int y, ref float layerDepthRef)
             {
-                if (batcher.ClipBegin(x, y, Width, Height))
-                {
-                    DrawSelection(batcher, x, y);
+                float layerDepth = layerDepthRef;
+                renderLists.AddGumpNoAtlas(
+                    batcher =>
+                    {
+                        if (batcher.ClipBegin(x, y, Width, Height))
+                        {
+                            DrawSelection(batcher, x, y, layerDepth);
 
-                    _rendererText.Draw(batcher, x, y);
+                            _rendererText.Draw(batcher, x, y, layerDepth);
 
-                    DrawCaret(batcher, x, y);
-                    batcher.ClipEnd();
-                }
+                            DrawCaret(batcher, x, y, layerDepth);
+                            batcher.ClipEnd();
+                        }
+                        return true;
+                    }
+                );
 
                 return true;
             }

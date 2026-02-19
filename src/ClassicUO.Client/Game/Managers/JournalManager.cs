@@ -1,34 +1,4 @@
-﻿#region license
-
-// Copyright (c) 2024, andreakarasho
-// All rights reserved.
-// 
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. All advertising materials mentioning features or use of this software
-//    must display the following acknowledgement:
-//    This product includes software developed by andreakarasho - https://github.com/andreakarasho
-// 4. Neither the name of the copyright holder nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-// 
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ''AS IS'' AND ANY
-// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY
-// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-#endregion
+﻿// SPDX-License-Identifier: BSD-2-Clause
 
 using System;
 using System.IO;
@@ -50,7 +20,7 @@ namespace ClassicUO.Game.Managers
         public event EventHandler<JournalEntry> EntryAdded;
 
 
-        public void Add(string text, ushort hue, string name, TextType type, bool isunicode = true)
+        public void Add(string text, ushort hue, string name, uint? serial, TextType type, bool isunicode = true, MessageType messageType = MessageType.Regular)
         {
             JournalEntry entry = Entries.Count >= Constants.MAX_JOURNAL_HISTORY_COUNT ? Entries.RemoveFromFront() : new JournalEntry();
 
@@ -71,6 +41,7 @@ namespace ClassicUO.Game.Managers
             entry.IsUnicode = isunicode;
             entry.Time = timeNow;
             entry.TextType = type;
+            entry.MessageType = messageType;
 
             if (ProfileManager.CurrentProfile != null && ProfileManager.CurrentProfile.ForceUnicodeJournal)
             {
@@ -86,11 +57,14 @@ namespace ClassicUO.Game.Managers
                 CreateWriter();
             }
 
-            string output = $"[{timeNow:G}]  {name}: {text}";
+            bool saveSerial = ProfileManager.GlobalProfile != null && ProfileManager.GlobalProfile.JournalFileWithSerial;
+            string serialText = saveSerial && serial.HasValue ? $"<0x{serial.Value:X8}> " : string.Empty;
+
+            string output = $"[{timeNow:G}]  {serialText}{name}: {text}";
 
             if (string.IsNullOrWhiteSpace(name))
             {
-                output = $"[{timeNow:G}]  {text}";
+                output = $"[{timeNow:G}]  {serialText}{text}";
             }
 
             _fileWriter?.WriteLine(output);
@@ -104,25 +78,31 @@ namespace ClassicUO.Game.Managers
                 {
                     string path = FileSystemHelper.CreateFolderIfNotExists(Path.Combine(CUOEnviroment.ExecutablePath, "Data"), "Client", "JournalLogs");
 
+                    int maxJournalFiles = ProfileManager.GlobalProfile?.MaxJournalFiles ?? -1;
+
+                    if (maxJournalFiles >= 0)
+                    {
+                        try
+                        {
+                            string[] files = Directory.GetFiles(path, "*_journal.txt");
+                            Array.Sort(files);
+                            Array.Reverse(files);
+
+                            for (int i = files.Length - 1; i >= maxJournalFiles; --i)
+                            {
+                                File.Delete(files[i]);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Log.Error($"Failed to delete old journal files. Original Error: {ex.Message}");
+                        }
+                    }
+
                     _fileWriter = new StreamWriter(File.Open(Path.Combine(path, $"{DateTime.Now:yyyy_MM_dd_HH_mm_ss}_journal.txt"), FileMode.Create, FileAccess.Write, FileShare.Read))
                     {
                         AutoFlush = true
                     };
-
-                    try
-                    {
-                        string[] files = Directory.GetFiles(path, "*_journal.txt");
-                        Array.Sort(files);
-                        Array.Reverse(files);
-
-                        for (int i = files.Length - 1; i >= 100; --i)
-                        {
-                            File.Delete(files[i]);
-                        }
-                    }
-                    catch
-                    {
-                    }
                 }
                 catch (Exception ex)
                 {
@@ -158,5 +138,7 @@ namespace ClassicUO.Game.Managers
 
         public TextType TextType;
         public DateTime Time;
+
+        public MessageType MessageType;
     }
 }

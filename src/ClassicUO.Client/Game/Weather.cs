@@ -1,42 +1,11 @@
-﻿#region license
+﻿// SPDX-License-Identifier: BSD-2-Clause
 
-// Copyright (c) 2024, andreakarasho
-// All rights reserved.
-// 
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. All advertising materials mentioning features or use of this software
-//    must display the following acknowledgement:
-//    This product includes software developed by andreakarasho - https://github.com/andreakarasho
-// 4. Neither the name of the copyright holder nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-// 
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ''AS IS'' AND ANY
-// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY
-// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-#endregion
-
-using System;
-using ClassicUO.Configuration;
 using ClassicUO.Game.Data;
 using ClassicUO.Renderer;
 using ClassicUO.Resources;
 using ClassicUO.Utility;
 using Microsoft.Xna.Framework;
+using System;
 using MathHelper = Microsoft.Xna.Framework.MathHelper;
 
 namespace ClassicUO.Game
@@ -57,7 +26,7 @@ namespace ClassicUO.Game
         private const int MAX_WEATHER_EFFECT = 70;
         private const float SIMULATION_TIME = 37.0f;
 
-        private readonly WeatherEffect[] _effects = new WeatherEffect[MAX_WEATHER_EFFECT];
+        private readonly WeatherEffect[] _effects = new WeatherEffect[byte.MaxValue];
         private uint _timer, _windTimer, _lastTick;
         private readonly World _world;
 
@@ -70,6 +39,7 @@ namespace ClassicUO.Game
         public WeatherType? CurrentWeather { get; private set; }
         public WeatherType Type { get; private set; }
         public byte Count { get; private set; }
+        public byte ScaledCount { get; private set; }
         public byte CurrentCount { get; private set; }
         public byte Temperature{ get; private set; }
         public sbyte Wind { get; private set; }
@@ -95,12 +65,12 @@ namespace ClassicUO.Game
 
         public void Generate(WeatherType type, byte count, byte temp)
         {
-            if (CurrentWeather.HasValue && CurrentWeather == type)
-            {
-                return;
-            }
+            bool extended = CurrentWeather.HasValue && CurrentWeather == type;
 
-            Reset();
+            if (!extended)
+            {
+                Reset();
+            }
 
             Type = type;
             Count = (byte) Math.Min(MAX_WEATHER_EFFECT, (int) count);
@@ -117,7 +87,7 @@ namespace ClassicUO.Game
                 return;
             }
 
-            bool showMessage = Count > 0;
+            bool showMessage = Count > 0 && !extended;
 
             switch (type)
             {
@@ -203,12 +173,25 @@ namespace ClassicUO.Game
 
             _windTimer = 0;
 
-            while (CurrentCount < Count)
+            ScaledCount = CalculateScaledCount(Count);
+            CurrentCount = ScaledCount;
+
+            for (int i = 0; i < _effects.Length; i++)
             {
-                ref WeatherEffect effect = ref _effects[CurrentCount++];
+                ref WeatherEffect effect = ref _effects[i];
                 effect.X = RandomHelper.GetValue(0, Client.Game.Scene.Camera.Bounds.Width);
                 effect.Y = RandomHelper.GetValue(0, Client.Game.Scene.Camera.Bounds.Height);
             }
+        }
+
+        private static byte CalculateScaledCount(byte count)
+        {
+            if (count <= 0)
+            {
+                return 0;
+            }
+            float legacyWindowSize = 640 * 480;
+            return (byte)Math.Max(1, Math.Min(byte.MaxValue, count * (Client.Game.Scene.Camera.Bounds.Width * Client.Game.Scene.Camera.Bounds.Height) / legacyWindowSize));
         }
 
         private void PlayWind()
@@ -239,7 +222,7 @@ namespace ClassicUO.Game
             Client.Game.Audio.PlaySoundWithDistance(_world, sound, _world.Player.X + randX, _world.Player.Y + randY);
         }
 
-        public void Draw(UltimaBatcher2D batcher, int x, int y)
+        public void Draw(UltimaBatcher2D batcher, int x, int y, float layerDepth)
         {
             bool removeEffects = false;
 
@@ -247,6 +230,8 @@ namespace ClassicUO.Game
             {
                 if (CurrentCount == 0)
                 {
+                    // Time for the weather has passed and all weather effects have disappeared
+                    Reset();
                     return;
                 }
 
@@ -255,6 +240,15 @@ namespace ClassicUO.Game
             else if (Type == WeatherType.WT_INVALID_0 || Type == WeatherType.WT_INVALID_1)
             {
                 return;
+            }
+
+            //Rescale the count if window size has changed
+            byte newScaledCount = CalculateScaledCount(Count);
+
+            if (newScaledCount != ScaledCount)
+            {
+                CurrentCount = (byte)Math.Min(byte.MaxValue, CurrentCount * newScaledCount / ScaledCount);
+                ScaledCount = newScaledCount;
             }
 
             uint passed = Time.Ticks - _lastTick;
@@ -453,7 +447,8 @@ namespace ClassicUO.Game
                            start,
                            end,
                            Vector3.UnitZ,
-                           2
+                           2,
+                           layerDepth
                         );
 
                         break;
@@ -470,7 +465,8 @@ namespace ClassicUO.Game
                         (
                             SolidColorTextureCache.GetTexture(Color.White),
                             snowRect,
-                            Vector3.UnitZ
+                            Vector3.UnitZ,
+                            layerDepth
                         );
 
                         break;

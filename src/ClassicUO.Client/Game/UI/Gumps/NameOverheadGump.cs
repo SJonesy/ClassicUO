@@ -1,48 +1,18 @@
-#region license
+// SPDX-License-Identifier: BSD-2-Clause
 
-// Copyright (c) 2024, andreakarasho
-// All rights reserved.
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. All advertising materials mentioning features or use of this software
-//    must display the following acknowledgement:
-//    This product includes software developed by andreakarasho - https://github.com/andreakarasho
-// 4. Neither the name of the copyright holder nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ''AS IS'' AND ANY
-// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY
-// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-#endregion
-
-using System;
+using ClassicUO.Assets;
 using ClassicUO.Configuration;
 using ClassicUO.Game.Data;
 using ClassicUO.Game.GameObjects;
 using ClassicUO.Game.Managers;
+using ClassicUO.Game.Scenes;
 using ClassicUO.Game.UI.Controls;
 using ClassicUO.Input;
-using ClassicUO.Assets;
 using ClassicUO.Renderer;
 using ClassicUO.Utility;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using ClassicUO.Game.Scenes;
+using System;
 
 namespace ClassicUO.Game.UI.Gumps
 {
@@ -108,7 +78,7 @@ namespace ClassicUO.Game.UI.Gumps
 
                     if (string.IsNullOrEmpty(item.ItemData.Name))
                     {
-                        t += ClilocLoader.Instance.GetString(1020000 + item.Graphic, true, t);
+                        t += Client.Game.UO.FileManager.Clilocs.GetString(1020000 + item.Graphic, true, t);
                     }
                     else
                     {
@@ -126,14 +96,14 @@ namespace ClassicUO.Game.UI.Gumps
                     return false;
                 }
 
-                FontsLoader.Instance.SetUseHTML(true);
-                FontsLoader.Instance.RecalculateWidthByInfo = true;
+                Client.Game.UO.FileManager.Fonts.SetUseHTML(true);
+                Client.Game.UO.FileManager.Fonts.RecalculateWidthByInfo = true;
 
-                int width = FontsLoader.Instance.GetWidthUnicode(_renderedText.Font, t);
+                int width = Client.Game.UO.FileManager.Fonts.GetWidthUnicode(_renderedText.Font, t);
 
                 if (width > Constants.OBJECT_HANDLES_GUMP_WIDTH)
                 {
-                    t = FontsLoader.Instance.GetTextByWidthUnicode(
+                    t = Client.Game.UO.FileManager.Fonts.GetTextByWidthUnicode(
                         _renderedText.Font,
                         t.AsSpan(),
                         Constants.OBJECT_HANDLES_GUMP_WIDTH,
@@ -148,8 +118,8 @@ namespace ClassicUO.Game.UI.Gumps
                 _renderedText.MaxWidth = width;
                 _renderedText.Text = t;
 
-                FontsLoader.Instance.RecalculateWidthByInfo = false;
-                FontsLoader.Instance.SetUseHTML(false);
+                Client.Game.UO.FileManager.Fonts.RecalculateWidthByInfo = false;
+                Client.Game.UO.FileManager.Fonts.SetUseHTML(false);
 
                 Width = _background.Width = Math.Max(60, _renderedText.Width) + 4;
                 Height = _background.Height = Constants.OBJECT_HANDLES_GUMP_HEIGHT + 4;
@@ -163,11 +133,11 @@ namespace ClassicUO.Game.UI.Gumps
             {
                 string t = entity.Name;
 
-                int width = FontsLoader.Instance.GetWidthUnicode(_renderedText.Font, t);
+                int width = Client.Game.UO.FileManager.Fonts.GetWidthUnicode(_renderedText.Font, t);
 
                 if (width > Constants.OBJECT_HANDLES_GUMP_WIDTH)
                 {
-                    t = FontsLoader.Instance.GetTextByWidthUnicode(
+                    t = Client.Game.UO.FileManager.Fonts.GetTextByWidthUnicode(
                         _renderedText.Font,
                         t.AsSpan(),
                         Constants.OBJECT_HANDLES_GUMP_WIDTH,
@@ -253,7 +223,7 @@ namespace ClassicUO.Game.UI.Gumps
                 BaseHealthBarGump gump = UIManager.GetGump<BaseHealthBarGump>(LocalSerial);
                 gump?.Dispose();
 
-                if (entity == World.Player)
+                if (entity == World.Player && ProfileManager.CurrentProfile.StatusGumpBarMutuallyExclusive)
                 {
                     StatusGumpBase.GetStatusGump()?.Dispose();
                 }
@@ -369,6 +339,7 @@ namespace ClassicUO.Game.UI.Gumps
                         case CursorTarget.Object:
                         case CursorTarget.Grab:
                         case CursorTarget.SetGrabBag:
+                        case CursorTarget.CallbackTarget:
                             World.TargetManager.Target(LocalSerial);
                             Mouse.LastLeftButtonClickTime = 0;
 
@@ -576,7 +547,7 @@ namespace ClassicUO.Game.UI.Gumps
             }
         }
 
-        public override bool Draw(UltimaBatcher2D batcher, int x, int y)
+        public override bool AddToRenderLists(RenderLists renderLists, int x, int y, ref float layerDepthRef)
         {
             if (IsDisposed || !SetName())
             {
@@ -671,27 +642,38 @@ namespace ClassicUO.Game.UI.Gumps
             {
                 return false;
             }
+            float layerDepth = layerDepthRef;
 
             X = x;
             Y = y;
+            renderLists.AddGumpNoAtlas(
+                batcher =>
+                {
+                    batcher.DrawRectangle(_borderColor, x - 1, y - 1, Width + 1, Height + 1, hueVector, layerDepth);
+                    return true;
+                }
+            );
 
-            batcher.DrawRectangle(_borderColor, x - 1, y - 1, Width + 1, Height + 1, hueVector);
-
-            base.Draw(batcher, x, y);
+            base.AddToRenderLists(renderLists, x, y, ref layerDepthRef);
 
             int renderedTextOffset = Math.Max(0, Width - _renderedText.Width - 4) >> 1;
-
-            return _renderedText.Draw(
-                batcher,
-                Width,
-                Height,
-                x + 2 + renderedTextOffset,
-                y + 2,
-                Width,
-                Height,
-                0,
-                0
+            renderLists.AddGumpNoAtlas(batcher =>
+                {
+                    return _renderedText.Draw(
+                        batcher,
+                        Width,
+                        Height,
+                        x + 2 + renderedTextOffset,
+                        y + 2,
+                        Width,
+                        Height,
+                        0,
+                        0,
+                        layerDepth + CHILD_LAYER_INCREMENT * 2
+                    );
+                }
             );
+            return true;
         }
 
         public override void Dispose()

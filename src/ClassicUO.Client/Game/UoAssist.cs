@@ -1,34 +1,4 @@
-﻿#region license
-
-// Copyright (c) 2024, andreakarasho
-// All rights reserved.
-// 
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. All advertising materials mentioning features or use of this software
-//    must display the following acknowledgement:
-//    This product includes software developed by andreakarasho - https://github.com/andreakarasho
-// 4. Neither the name of the copyright holder nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-// 
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ''AS IS'' AND ANY
-// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY
-// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-#endregion
+﻿// SPDX-License-Identifier: BSD-2-Clause
 
 using System;
 using System.Collections.Generic;
@@ -41,7 +11,7 @@ using ClassicUO.Game.GameObjects;
 using ClassicUO.Game.Managers;
 using ClassicUO.Game.Scenes;
 using ClassicUO.Utility.Logging;
-using SDL2;
+using SDL3;
 
 namespace ClassicUO.Utility.Platforms
 {
@@ -63,7 +33,8 @@ namespace ClassicUO.Utility.Platforms
 
             try
             {
-                _customWindow = new CustomWindow(world, "UOASSIST-TP-MSG-WND");
+                if (Client.Game?.Window != null)
+                    _customWindow = new CustomWindow(Client.Game.Window.Handle, world, "UOASSIST-TP-MSG-WND");
             }
             catch
             { }
@@ -115,19 +86,17 @@ namespace ClassicUO.Utility.Platforms
 
             private readonly WndProc m_wnd_proc_delegate;
 
-            public CustomWindow(World world, string class_name)
+            public CustomWindow(IntPtr wndHandle, World world, string class_name)
             {
                 _world = world;
 
-                SDL.SDL_SysWMinfo info = new SDL.SDL_SysWMinfo();
-                SDL.SDL_VERSION(out info.version);
-                SDL.SDL_GetWindowWMInfo(Client.Game.Window.Handle, ref info);
-
                 IntPtr hwnd = IntPtr.Zero;
-
-                if (info.subsystem == SDL.SDL_SYSWM_TYPE.SDL_SYSWM_WINDOWS)
+                if (CUOEnviroment.IsWindows)
                 {
-                    hwnd = info.info.win.window;
+                    hwnd = SDL.SDL_GetPointerProperty(
+                        SDL.SDL_GetWindowProperties(Client.Game.Window.Handle),
+                        SDL.SDL_PROP_WINDOW_WIN32_HWND_POINTER, IntPtr.Zero
+                    );
                 }
 
                 if (class_name == null)
@@ -395,15 +364,13 @@ namespace ClassicUO.Utility.Platforms
                     case UOAMessage.ADD_USER_2_PARTY: break;
 
                     case UOAMessage.GET_UO_HWND:
-                        SDL.SDL_SysWMinfo info = new SDL.SDL_SysWMinfo();
-                        SDL.SDL_VERSION(out info.version);
-                        SDL.SDL_GetWindowWMInfo(SDL.SDL_GL_GetCurrentWindow(), ref info);
-
                         IntPtr hwnd = IntPtr.Zero;
-
-                        if (info.subsystem == SDL.SDL_SYSWM_TYPE.SDL_SYSWM_WINDOWS)
+                        if (CUOEnviroment.IsWindows)
                         {
-                            hwnd = info.info.win.window;
+                            hwnd = SDL.SDL_GetPointerProperty(
+                                SDL.SDL_GetWindowProperties(Client.Game.Window.Handle),
+                                SDL.SDL_PROP_WINDOW_WIN32_HWND_POINTER, IntPtr.Zero
+                            );
                         }
 
                         return (int) hwnd;

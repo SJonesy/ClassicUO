@@ -1,34 +1,4 @@
-﻿#region license
-
-// Copyright (c) 2024, andreakarasho
-// All rights reserved.
-// 
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. All advertising materials mentioning features or use of this software
-//    must display the following acknowledgement:
-//    This product includes software developed by andreakarasho - https://github.com/andreakarasho
-// 4. Neither the name of the copyright holder nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-// 
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ''AS IS'' AND ANY
-// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY
-// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-#endregion
+﻿// SPDX-License-Identifier: BSD-2-Clause
 
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -115,29 +85,57 @@ namespace ClassicUO.Renderer
             UpdateMatrices();
         }
 
-        public Point ScreenToWorld(Point point)
+        public Point ScreenToWorld(Point point, bool withOffset = false)
         {
             UpdateMatrices();
 
-            Transform(ref point, ref _inverseTransform, out point);
+            int offsetX = 0;
+            int offsetY = 0;
+            if (withOffset)
+            {
+                offsetX = -Bounds.X;
+                offsetY = -Bounds.Y;
+            }
+
+            Transform(ref point, ref _inverseTransform, out point, offsetX, offsetY);
 
             return point;
         }
 
-        public Point WorldToScreen(Point point)
+        /// <summary>
+        ///     Returns screen coordinates from world coordinates.
+        ///     There are two variants for screen coordinates:
+        ///     1. Relative to the game window (withOffset = true)
+        ///     2. Relative to the camera viewport (withOffset = false)
+        ///     Because of the fact that the camera viewport content now
+        ///     fully scales with the zoom level, everything that
+        ///     is not supposed to zoom (UI, etc.) is drawn
+        ///     in the UI render target now.
+        ///     Only those aspects need to adjust for case 1 above.
+        /// </summary>
+        public Point WorldToScreen(Point point, bool withOffset = false)
         {
             UpdateMatrices();
 
-            Transform(ref point, ref _transform, out point);
+            int offsetX = 0;
+            int offsetY = 0;
+            if (withOffset)
+            {
+                offsetX = Bounds.X;
+                offsetY = Bounds.Y;
+            }
+
+            Transform(ref point, ref _transform, out point, offsetX, offsetY);
 
             return point;
         }
+
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void Transform(ref Point position, ref Matrix matrix, out Point result)
+        private static void Transform(ref Point position, ref Matrix matrix, out Point result, int offsetX, int offsetY)
         {
-            float x = position.X * matrix.M11 + position.Y * matrix.M21 + matrix.M41;
-            float y = position.X * matrix.M12 + position.Y * matrix.M22 + matrix.M42;
+            float x = position.X * matrix.M11 + position.Y * matrix.M21 + matrix.M41 + offsetX;
+            float y = position.X * matrix.M12 + position.Y * matrix.M22 + matrix.M42 + offsetY;
             result.X = (int) x;
             result.Y = (int) y;
         }
@@ -185,10 +183,7 @@ namespace ClassicUO.Renderer
         {
             float zoom = 1f / Zoom;
 
-            const float FADE_TIME = 12.0f;
-            const float SMOOTHING_FACTOR = (1.0f / FADE_TIME) * 60.0f;
-
-            _lerpZoom = zoom; // MathHelper.Lerp(_lerpZoom, zoom, SMOOTHING_FACTOR * Time.Delta);
+            _lerpZoom = zoom;
         }
 
         private void CalculatePeek(Vector2 origin)

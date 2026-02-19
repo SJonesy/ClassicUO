@@ -898,11 +898,111 @@ namespace ClassicUO.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Compare amount to....
+        /// </summary>
+        public static string CounterCompareTo {
+            get {
+                return ResourceManager.GetString("CounterCompareTo", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to The value must be a valid number!.
+        /// </summary>
+        public static string CounterCompareToDialogInvalid {
+            get {
+                return ResourceManager.GetString("CounterCompareToDialogInvalid", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Compare to value.
+        /// </summary>
+        public static string CounterCompareToDialogText1 {
+            get {
+                return ResourceManager.GetString("CounterCompareToDialogText1", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to (leave empty to reset).
+        /// </summary>
+        public static string CounterCompareToDialogText2 {
+            get {
+                return ResourceManager.GetString("CounterCompareToDialogText2", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Drop an item here to
+        ///start your first counter.
+        /// </summary>
+        public static string CounterEmptyHelpText {
+            get {
+                return ResourceManager.GetString("CounterEmptyHelpText", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Counter Bar: Slot number &apos;{0}&apos; could not be found.
+        /// </summary>
+        public static string CounterErrorSlotNotFound {
+            get {
+                return ResourceManager.GetString("CounterErrorSlotNotFound", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Counter Bar: Slot &apos;{0}&apos; is not a valid number.
+        /// </summary>
+        public static string CounterErrorSlotNotValid {
+            get {
+                return ResourceManager.GetString("CounterErrorSlotNotValid", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Compare Hue (ON).
+        /// </summary>
+        public static string CounterIgnoreHueOff {
+            get {
+                return ResourceManager.GetString("CounterIgnoreHueOff", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Compare Hue (OFF).
+        /// </summary>
+        public static string CounterIgnoreHueOn {
+            get {
+                return ResourceManager.GetString("CounterIgnoreHueOn", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Counter Layout:.
         /// </summary>
         public static string CounterLayout {
             get {
                 return ResourceManager.GetString("CounterLayout", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Read-only mode (OFF).
+        /// </summary>
+        public static string CounterReadonlyOff {
+            get {
+                return ResourceManager.GetString("CounterReadonlyOff", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Read-only mode (ON).
+        /// </summary>
+        public static string CounterReadonlyOn {
+            get {
+                return ResourceManager.GetString("CounterReadonlyOn", resourceCulture);
             }
         }
         
@@ -1058,6 +1158,15 @@ namespace ClassicUO.Resources {
                 return ResourceManager.GetString("Decline", resourceCulture);
             }
         }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Screen zoom:.
+        /// </summary>
+        public static string ScreenZoom {
+            get {
+                return ResourceManager.GetString("ScreenZoom", resourceCulture);
+            }
+        }
         
         /// <summary>
         ///   Looks up a localized string similar to Default zoom:.
@@ -1200,6 +1309,15 @@ namespace ClassicUO.Resources {
         public static string DoubleClickLootContainers {
             get {
                 return ResourceManager.GetString("DoubleClickLootContainers", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Select hostiles only.
+        /// </summary>
+        public static string DragHostileOnly {
+            get {
+                return ResourceManager.GetString("DragHostileOnly", resourceCulture);
             }
         }
         
@@ -1403,7 +1521,7 @@ namespace ClassicUO.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Enter X Y location:.
+        ///   Looks up a localized string similar to Enter Location.
         /// </summary>
         public static string EnterLocation {
             get {
@@ -1808,7 +1926,7 @@ namespace ClassicUO.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Highlight container on ground when mouse is over a container gump.
+        ///   Looks up a localized string similar to Highlight container when mouse is over a container gump.
         /// </summary>
         public static string HighlightContainerWhenSelected {
             get {
@@ -1835,11 +1953,11 @@ namespace ClassicUO.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Highlight On Use.
+        ///   Looks up a localized string similar to Highlight On Change.
         /// </summary>
-        public static string HighlightOnUse {
+        public static string HighlightOnChange {
             get {
-                return ResourceManager.GetString("HighlightOnUse", resourceCulture);
+                return ResourceManager.GetString("HighlightOnChange", resourceCulture);
             }
         }
         
@@ -2201,6 +2319,15 @@ namespace ClassicUO.Resources {
         public static string Journal {
             get {
                 return ResourceManager.GetString("Journal", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Add speaker serial to journal entries.
+        /// </summary>
+        public static string JournalFileWithSerial {
+            get {
+                return ResourceManager.GetString("JournalFileWithSerial", resourceCulture);
             }
         }
         
@@ -2630,6 +2757,15 @@ namespace ClassicUO.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Keep at most this many journal files:.
+        /// </summary>
+        public static string MaxJournalFiles {
+            get {
+                return ResourceManager.GetString("MaxJournalFiles", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Max Stats.
         /// </summary>
         public static string MaxStats {
@@ -2743,6 +2879,15 @@ namespace ClassicUO.Resources {
         public static string NewMacro {
             get {
                 return ResourceManager.GetString("NewMacro", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Use new target system.
+        /// </summary>
+        public static string NewTargetSystem {
+            get {
+                return ResourceManager.GetString("NewTargetSystem", resourceCulture);
             }
         }
         
@@ -2869,6 +3014,15 @@ namespace ClassicUO.Resources {
         public static string OutOfRangeColor {
             get {
                 return ResourceManager.GetString("OutOfRangeColor", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Show party messages overhead.
+        /// </summary>
+        public static string OverheadPartyMessages {
+            get {
+                return ResourceManager.GetString("OverheadPartyMessages", resourceCulture);
             }
         }
         
@@ -3080,6 +3234,15 @@ namespace ClassicUO.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to [Prompt]:.
+        /// </summary>
+        public static string Prompt {
+            get {
+                return ResourceManager.GetString("Prompt", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Query before attack.
         /// </summary>
         public static string QueryAttack {
@@ -3212,6 +3375,15 @@ namespace ClassicUO.Resources {
         public static string ResetGroups {
             get {
                 return ResourceManager.GetString("ResetGroups", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Reset maps cache.
+        /// </summary>
+        public static string ResetMapsCache {
+            get {
+                return ResourceManager.GetString("ResetMapsCache", resourceCulture);
             }
         }
         
@@ -3396,6 +3568,15 @@ namespace ClassicUO.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Save current settings as defaults for new users.
+        /// </summary>
+        public static string SetAsNewDefault {
+            get {
+                return ResourceManager.GetString("SetAsNewDefault", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Set loot bag.
         /// </summary>
         public static string SetLootBag {
@@ -3500,6 +3681,15 @@ namespace ClassicUO.Resources {
         public static string ShowCaps {
             get {
                 return ResourceManager.GetString("ShowCaps", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Show DPS with damage numbers.
+        /// </summary>
+        public static string ShowDPSWithDamage {
+            get {
+                return ResourceManager.GetString("ShowDPSWithDamage", resourceCulture);
             }
         }
         
@@ -3644,6 +3834,15 @@ namespace ClassicUO.Resources {
         public static string ShowReal {
             get {
                 return ResourceManager.GetString("ShowReal", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Show sextant coordinates.
+        /// </summary>
+        public static string ShowSextantCoordinates {
+            get {
+                return ResourceManager.GetString("ShowSextantCoordinates", resourceCulture);
             }
         }
         
@@ -3851,6 +4050,33 @@ namespace ClassicUO.Resources {
         public static string Static0Height1Flags2Alpha3 {
             get {
                 return ResourceManager.GetString("Static0Height1Flags2Alpha3", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Status Gump and Health Bar are mutually exclusive.
+        /// </summary>
+        public static string StatusGumpBarMutuallyExclusive {
+            get {
+                return ResourceManager.GetString("StatusGumpBarMutuallyExclusive", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Open Health Bar.
+        /// </summary>
+        public static string StatusGumpOpenBar {
+            get {
+                return ResourceManager.GetString("StatusGumpOpenBar", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Stay active.
+        /// </summary>
+        public static string StayActive {
+            get {
+                return ResourceManager.GetString("StayActive", resourceCulture);
             }
         }
         
@@ -4220,6 +4446,15 @@ namespace ClassicUO.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Use alternative journal.
+        /// </summary>
+        public static string UseAlternateJournal {
+            get {
+                return ResourceManager.GetString("UseAlternateJournal", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Opaque background.
         /// </summary>
         public static string UseBlackBackgr {
@@ -4360,6 +4595,15 @@ namespace ClassicUO.Resources {
         public static string WorldMap {
             get {
                 return ResourceManager.GetString("WorldMap", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Map {0}.
+        /// </summary>
+        public static string WorldMapChangeMap0 {
+            get {
+                return ResourceManager.GetString("WorldMapChangeMap0", resourceCulture);
             }
         }
         

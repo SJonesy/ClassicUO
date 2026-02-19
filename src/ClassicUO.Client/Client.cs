@@ -1,48 +1,15 @@
-﻿#region license
-
-// Copyright (c) 2024, andreakarasho
-// All rights reserved.
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. All advertising materials mentioning features or use of this software
-//    must display the following acknowledgement:
-//    This product includes software developed by andreakarasho - https://github.com/andreakarasho
-// 4. Neither the name of the copyright holder nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ''AS IS'' AND ANY
-// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY
-// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-#endregion
+﻿// SPDX-License-Identifier: BSD-2-Clause
 
 using ClassicUO.Assets;
 using ClassicUO.Configuration;
 using ClassicUO.Game;
 using ClassicUO.Game.Data;
 using ClassicUO.IO;
-using ClassicUO.Network;
-using ClassicUO.Network.Encryption;
 using ClassicUO.Resources;
 using ClassicUO.Utility;
 using ClassicUO.Utility.Logging;
-using ClassicUO.Utility.Platforms;
 using Microsoft.Xna.Framework.Graphics;
-using SDL2;
+using SDL3;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -64,6 +31,7 @@ namespace ClassicUO
         public ClientVersion Version { get; private set; }
         public ClientFlags Protocol { get; set; }
         public string ClientPath { get; private set; }
+        public UOFileManager FileManager { get; private set; }
 
 
         public UltimaOnline()
@@ -91,7 +59,7 @@ namespace ClassicUO
 
             fixed (uint* ptr = buffer)
             {
-                HuesLoader.Instance.CreateShaderColors(buffer);
+                FileManager.Hues.CreateShaderColors(buffer);
 
                 hueSamplers[0].SetDataPointerEXT(
                     0,
@@ -112,40 +80,23 @@ namespace ClassicUO
             game.GraphicsDevice.Textures[1] = hueSamplers[0];
             game.GraphicsDevice.Textures[2] = hueSamplers[1];
 
-            Animations = new Renderer.Animations.Animations(game.GraphicsDevice);
-            Arts = new Renderer.Arts.Art(game.GraphicsDevice);
-            Gumps = new Renderer.Gumps.Gump(game.GraphicsDevice);
-            Texmaps = new Renderer.Texmaps.Texmap(game.GraphicsDevice);
-            Lights = new Renderer.Lights.Light(game.GraphicsDevice);
-            MultiMaps = new Renderer.MultiMaps.MultiMap(game.GraphicsDevice);
-            Sounds = new Renderer.Sounds.Sound();
+            Animations = new Renderer.Animations.Animations(FileManager.Animations, game.GraphicsDevice);
+            Arts = new Renderer.Arts.Art(FileManager.Arts, FileManager.Hues, game.GraphicsDevice);
+            Gumps = new Renderer.Gumps.Gump(FileManager.Gumps, game.GraphicsDevice);
+            Texmaps = new Renderer.Texmaps.Texmap(FileManager.Texmaps, game.GraphicsDevice);
+            Lights = new Renderer.Lights.Light(FileManager.Lights, game.GraphicsDevice);
+            MultiMaps = new Renderer.MultiMaps.MultiMap(FileManager.MultiMaps, game.GraphicsDevice);
+            Sounds = new Renderer.Sounds.Sound(FileManager.Sounds);
 
             LightColors.LoadLights();
 
             World = new World();
-            GameCursor = new GameCursor(World);
+            GameCursor = new GameCursor(World, game.DpiScale);
         }
 
         public void Unload()
         {
-            ArtLoader.Instance?.Dispose();
-            GumpsLoader.Instance?.Dispose();
-            TexmapsLoader.Instance?.Dispose();
-            AnimationsLoader.Instance?.Dispose();
-            LightsLoader.Instance?.Dispose();
-            TileDataLoader.Instance?.Dispose();
-            AnimDataLoader.Instance?.Dispose();
-            ClilocLoader.Instance?.Dispose();
-            FontsLoader.Instance?.Dispose();
-            HuesLoader.Instance?.Dispose();
-            MapLoader.Instance?.Dispose();
-            MultiLoader.Instance?.Dispose();
-            MultiMapLoader.Instance?.Dispose();
-            ProfessionLoader.Instance?.Dispose();
-            SkillsLoader.Instance?.Dispose();
-            SoundsLoader.Instance?.Dispose();
-            SpeechesLoader.Instance?.Dispose();
-            Verdata.File?.Dispose();
+            FileManager.Dispose();
             World?.Map?.Destroy();
         }
 
@@ -233,30 +184,17 @@ namespace ClassicUO
             Log.Trace($"Client version: {clientVersion}");
             Log.Trace($"Protocol: {Protocol}");
 
-            // ok now load uo files
-            UOFileManager.Load(Version, Settings.GlobalSettings.UltimaOnlineDirectory, Settings.GlobalSettings.UseVerdata, Settings.GlobalSettings.Language);
-            StaticFilters.Load();
+            var filesOverride = new UOFilesOverrideMap(Settings.GlobalSettings.OverrideFile);
+            filesOverride.Load();
+            FileManager = new UOFileManager(clientVersion, clientPath, filesOverride);
+            FileManager.Load(Settings.GlobalSettings.UseVerdata, Settings.GlobalSettings.Language, Settings.GlobalSettings.MapsLayouts);
 
+            StaticFilters.Load(FileManager.TileData);
             BuffTable.Load();
             ChairTable.Load();
 
-            Log.Trace("Network calibration...");
             //ATTENTION: you will need to enable ALSO ultimalive server-side, or this code will have absolutely no effect!
             UltimaLive.Enable();
-            PacketsTable.AdjustPacketSizeByVersion(Version);
-
-            if (Settings.GlobalSettings.Encryption != 0)
-            {
-                Log.Trace("Calculating encryption by client version...");
-                EncryptionHelper.CalculateEncryption(Version);
-                Log.Trace($"encryption: {EncryptionHelper.Type}");
-
-                if (EncryptionHelper.Type != (ENCRYPTION_TYPE) Settings.GlobalSettings.Encryption)
-                {
-                    Log.Warn($"Encryption found: {EncryptionHelper.Type}");
-                    Settings.GlobalSettings.Encryption = (byte) EncryptionHelper.Type;
-                }
-            }
         }
     }
 

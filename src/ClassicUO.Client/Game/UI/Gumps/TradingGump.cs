@@ -1,34 +1,4 @@
-﻿#region license
-
-// Copyright (c) 2024, andreakarasho
-// All rights reserved.
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. All advertising materials mentioning features or use of this software
-//    must display the following acknowledgement:
-//    This product includes software developed by andreakarasho - https://github.com/andreakarasho
-// 4. Neither the name of the copyright holder nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ''AS IS'' AND ANY
-// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY
-// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-#endregion
+﻿// SPDX-License-Identifier: BSD-2-Clause
 
 using System;
 using ClassicUO.Game.GameObjects;
@@ -91,7 +61,7 @@ namespace ClassicUO.Game.UI.Gumps
 
                     if (Client.Game.UO.Version >= ClientVersion.CV_704565)
                     {
-                        _myCoins[0].Text = _gold.ToString();
+                        _myCoins[0].Text = _gold.ToString("N0");
                     }
                 }
             }
@@ -108,7 +78,7 @@ namespace ClassicUO.Game.UI.Gumps
 
                     if (Client.Game.UO.Version >= ClientVersion.CV_704565)
                     {
-                        _myCoins[1].Text = _platinum.ToString();
+                        _myCoins[1].Text = _platinum.ToString("N0");
                     }
                 }
             }
@@ -125,7 +95,7 @@ namespace ClassicUO.Game.UI.Gumps
 
                     if (Client.Game.UO.Version >= ClientVersion.CV_704565)
                     {
-                        _hisCoins[0].Text = _hisGold.ToString();
+                        _hisCoins[0].Text = _hisGold.ToString("N0");
                     }
                 }
             }
@@ -142,7 +112,7 @@ namespace ClassicUO.Game.UI.Gumps
 
                     if (Client.Game.UO.Version >= ClientVersion.CV_704565)
                     {
-                        _hisCoins[1].Text = _hisPlatinum.ToString();
+                        _hisCoins[1].Text = _hisPlatinum.ToString("N0");
                     }
                 }
             }
@@ -188,7 +158,7 @@ namespace ClassicUO.Game.UI.Gumps
                 v.Dispose();
             }
 
-            ArtLoader loader = ArtLoader.Instance;
+            ArtLoader loader = Client.Game.UO.FileManager.Arts;
 
             for (LinkedObject i = container.Items; i != null; i = i.Next)
             {
@@ -427,7 +397,7 @@ namespace ClassicUO.Game.UI.Gumps
 
                 Add(new Label(World.Player.Name, false, 0x0481, font: 3) { X = 73, Y = 32 });
 
-                int fontWidth = 250 - FontsLoader.Instance.GetWidthASCII(3, _name);
+                int fontWidth = 250 - Client.Game.UO.FileManager.Fonts.GetWidthASCII(3, _name);
 
                 Add(new Label(_name, false, 0x0481, font: 3) { X = fontWidth, Y = 244 });
 
@@ -503,7 +473,7 @@ namespace ClassicUO.Game.UI.Gumps
                                 send = true;
                             }
                         }
-                        else if (uint.TryParse(entry.Text, out uint value))
+                        else if (uint.TryParse(entry.Text.Replace(",", ""), out uint value))
                         {
                             if ((int)entry.Tag == 0) // gold
                             {
@@ -538,7 +508,7 @@ namespace ClassicUO.Game.UI.Gumps
 
                             if (send)
                             {
-                                entry.SetText(value.ToString());
+                                entry.SetText(value.ToString("N0"));
                             }
                         }
 
@@ -568,7 +538,7 @@ namespace ClassicUO.Game.UI.Gumps
 
                 Add(new Label(World.Player.Name, false, 0x0386, font: 1) { X = 84, Y = 40 });
 
-                int fontWidth = 260 - FontsLoader.Instance.GetWidthASCII(1, _name);
+                int fontWidth = 260 - Client.Game.UO.FileManager.Fonts.GetWidthASCII(1, _name);
 
                 Add(new Label(_name, false, 0x0386, font: 1) { X = fontWidth, Y = 170 });
 

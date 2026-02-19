@@ -1,37 +1,5 @@
-﻿#region license
+﻿// SPDX-License-Identifier: BSD-2-Clause
 
-// Copyright (c) 2024, andreakarasho
-// All rights reserved.
-// 
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. All advertising materials mentioning features or use of this software
-//    must display the following acknowledgement:
-//    This product includes software developed by andreakarasho - https://github.com/andreakarasho
-// 4. Neither the name of the copyright holder nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-// 
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ''AS IS'' AND ANY
-// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY
-// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-#endregion
-
-using System;
-using System.Xml;
 using ClassicUO.Configuration;
 using ClassicUO.Game.GameObjects;
 using ClassicUO.Game.Scenes;
@@ -40,6 +8,8 @@ using ClassicUO.Input;
 using ClassicUO.Renderer;
 using ClassicUO.Utility;
 using Microsoft.Xna.Framework;
+using System;
+using System.Xml;
 
 namespace ClassicUO.Game.UI.Gumps
 {
@@ -48,7 +18,7 @@ namespace ClassicUO.Game.UI.Gumps
         private const string DEBUG_STRING_0 = "- FPS: {0} (Min={1}, Max={2}), Zoom: {3:0.00}, Total Objs: {4}\n";
         private const string DEBUG_STRING_1 = "- Mobiles: {0}   Items: {1}   Statics: {2}   Multi: {3}   Lands: {4}   Effects: {5}\n";
         private const string DEBUG_STRING_2 = "- CharPos: {0}\n- Mouse: {1}\n- InGamePos: {2}\n";
-        private const string DEBUG_STRING_3 = "- Selected: {0}";
+        private const string DEBUG_STRING_3 = "- Selected: {0}\n";
 
         private const string DEBUG_STRING_SMALL = "FPS: {0}\nZoom: {1:0.00}";
         private const string DEBUG_STRING_SMALL_NO_ZOOM = "FPS: {0}";
@@ -116,7 +86,7 @@ namespace ClassicUO.Game.UI.Gumps
                 GameScene scene = Client.Game.GetScene<GameScene>();
                 Span<char> span = stackalloc char[256];
                 ValueStringBuilder sb = new ValueStringBuilder(span);
-           
+
                 if (IsMinimized && scene != null)
                 {
                     sb.Append
@@ -139,32 +109,27 @@ namespace ClassicUO.Game.UI.Gumps
 
                     if (Profiler.Enabled)
                     {
-                        double timeDraw = Profiler.GetContext("RenderFrame").TimeInContext;
+                        double timeDraw = Profiler.GetContext(Profiler.ProfilerContext.RENDER_FRAME).TimeInContext;
+                        double timeDrawWorld = Profiler.GetContext(Profiler.ProfilerContext.RENDER_FRAME_WORLD).TimeInContext;
+                        double timeDrawWorldPrepare = Profiler.GetContext(Profiler.ProfilerContext.RENDER_FRAME_WORLD_PREPARE).TimeInContext;
+                        double timeDrawUi = Profiler.GetContext(Profiler.ProfilerContext.RENDER_FRAME_UI).TimeInContext;
 
-                        double timeUpdate = Profiler.GetContext("Update").TimeInContext;
+                        double timeUpdate = Profiler.GetContext(Profiler.ProfilerContext.UPDATE_WORLD).TimeInContext;
 
-                        double timeFixedUpdate = Profiler.GetContext("FixedUpdate").TimeInContext;
-
-                        double timeOutOfContext = Profiler.GetContext("OutOfContext").TimeInContext;
+                        double timeOutOfContext = Profiler.GetContext(Profiler.ProfilerContext.OUT_OF_CONTEXT).TimeInContext;
 
                         //double timeTotalCheck = timeOutOfContext + timeDraw + timeUpdate;
                         double timeTotal = Profiler.TrackedTime;
 
-                        double avgDrawMs = Profiler.GetContext("RenderFrame").AverageTime;
+                        double avgDrawMs = Profiler.GetContext(Profiler.ProfilerContext.RENDER_FRAME).AverageTime;
 
                         sb.Append("- Profiling\n");
 
                         sb.Append
                         (
-                            string.Format
-                            (
-                                "    Draw:{0:0.0}% Update:{1:0.0}% FixedUpd:{2:0.0} AvgDraw:{3:0.0}ms {4}\n",
-                                100d * (timeDraw / timeTotal),
-                                100d * (timeUpdate / timeTotal),
-                                100d * (timeFixedUpdate / timeTotal),
-                                avgDrawMs,
-                                CUOEnviroment.CurrentRefreshRate
-                            )
+                            $"    - Draw:{100d * (timeDraw / timeTotal):0.0}% (Prepare:{100d * (timeDrawWorldPrepare / timeTotal):0.0}% World:{100d * (timeDrawWorld / timeTotal):0.0}%, UI:{100d * (timeDrawUi / timeTotal):0.0}%)\n" +
+                            $"    - Update:{100d * (timeUpdate / timeTotal):0.0}%\n" +
+                            $"    - AvgDraw:{avgDrawMs:0.0}ms {CUOEnviroment.CurrentRefreshRate} FPS\n"
                         );
                     }
                 }
@@ -182,7 +147,7 @@ namespace ClassicUO.Game.UI.Gumps
                         sb.Append(string.Format(DEBUG_STRING_SMALL_NO_ZOOM, CUOEnviroment.CurrentRefreshRate));
                     }
                 }
-                
+
 
                 _cacheText = sb.ToString();
 
@@ -197,24 +162,31 @@ namespace ClassicUO.Game.UI.Gumps
             }
         }
 
-        public override bool Draw(UltimaBatcher2D batcher, int x, int y)
+        public override bool AddToRenderLists(RenderLists renderLists, int x, int y, ref float layerDepthRef)
         {
-            if (!base.Draw(batcher, x, y))
+            if (!base.AddToRenderLists(renderLists, x, y, ref layerDepthRef))
             {
                 return false;
             }
+            float layerDepth = layerDepthRef;
 
             Vector3 hueVector = ShaderHueTranslator.GetHueVector(0);
 
-            batcher.DrawString
-            (
-                Fonts.Bold,
-                _cacheText,
-                x + 10,
-                y + 10,
-                hueVector
+            renderLists.AddGumpNoAtlas(
+                batcher =>
+                {
+                    batcher.DrawString
+                    (
+                        Fonts.Bold,
+                        _cacheText,
+                        x + 10,
+                        y + 10,
+                        hueVector,
+                        layerDepth
+                    );
+                    return true;
+                }
             );
-
             return true;
         }
 

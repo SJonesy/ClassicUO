@@ -1,42 +1,13 @@
-﻿#region license
+﻿// SPDX-License-Identifier: BSD-2-Clause
 
-// Copyright (c) 2024, andreakarasho
-// All rights reserved.
-// 
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. All advertising materials mentioning features or use of this software
-//    must display the following acknowledgement:
-//    This product includes software developed by andreakarasho - https://github.com/andreakarasho
-// 4. Neither the name of the copyright holder nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-// 
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ''AS IS'' AND ANY
-// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY
-// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-#endregion
-
-using System;
-using System.Collections.Generic;
 using ClassicUO.Game.Managers;
+using ClassicUO.Game.Scenes;
 using ClassicUO.Game.UI.Gumps;
 using ClassicUO.Input;
 using ClassicUO.Renderer;
 using Microsoft.Xna.Framework;
+using System;
+using System.Collections.Generic;
 
 namespace ClassicUO.Game.UI.Controls
 {
@@ -163,14 +134,14 @@ namespace ClassicUO.Game.UI.Controls
             X = Mouse.Position.X + 5;
             Y = Mouse.Position.Y - 20;
 
-            if (X + _background.Width > Client.Game.Window.ClientBounds.Width)
+            if (X + _background.Width > Client.Game.ClientBounds.Width)
             {
-                X = Client.Game.Window.ClientBounds.Width - _background.Width;
+                X = Client.Game.ClientBounds.Width - _background.Width;
             }
 
-            if (Y + _background.Height > Client.Game.Window.ClientBounds.Height)
+            if (Y + _background.Height > Client.Game.ClientBounds.Height)
             {
-                Y = Client.Game.Window.ClientBounds.Height - _background.Height;
+                Y = Client.Game.ClientBounds.Height - _background.Height;
             }
 
             foreach (ContextMenuItem mitem in FindControls<ContextMenuItem>())
@@ -189,21 +160,29 @@ namespace ClassicUO.Game.UI.Controls
             WantUpdateSize = true;
         }
 
-        public override bool Draw(UltimaBatcher2D batcher, int x, int y)
+        public override bool AddToRenderLists(RenderLists renderLists, int x, int y, ref float layerDepthRef)
         {
+            float layerDepth = layerDepthRef;
             Vector3 hueVector = ShaderHueTranslator.GetHueVector(0);
 
-            batcher.DrawRectangle
+            renderLists.AddGumpNoAtlas
             (
-                SolidColorTextureCache.GetTexture(Color.Gray),
-                x - 1,
-                y - 1,
-                _background.Width + 1,
-                _background.Height + 1,
-                hueVector
+                (batcher) =>
+                {
+                    batcher.DrawRectangle
+                    (
+                        SolidColorTextureCache.GetTexture(Color.Gray),
+                        x - 1,
+                        y - 1,
+                        _background.Width + 1,
+                        _background.Height + 1,
+                        hueVector,
+                        layerDepth
+                    );
+                    return true;
+                }
             );
-
-            return base.Draw(batcher, x, y);
+            return base.AddToRenderLists(renderLists, x, y, ref layerDepthRef);
         }
 
         public override bool Contains(int x, int y)
@@ -287,7 +266,7 @@ namespace ClassicUO.Game.UI.Controls
                     Width = 100;
                 }
 
-                // it is a bit tricky, but works :D 
+                // it is a bit tricky, but works :D
                 if (_entry.Items != null && _entry.Items.Count != 0)
                 {
                     _subMenu = new ContextMenuShowMenu(_gump.World, _entry.Items);
@@ -362,31 +341,48 @@ namespace ClassicUO.Game.UI.Controls
                 }
             }
 
-            public override bool Draw(UltimaBatcher2D batcher, int x, int y)
+            public override bool AddToRenderLists(RenderLists renderLists, int x, int y, ref float layerDepthRef)
             {
                 if (!string.IsNullOrWhiteSpace(_label.Text) && MouseIsOver)
                 {
                     Vector3 hueVector = ShaderHueTranslator.GetHueVector(0);
 
-                    batcher.Draw
+                    float layerDepth = layerDepthRef;
+                    renderLists.AddGumpNoAtlas
                     (
-                        SolidColorTextureCache.GetTexture(Color.Gray),
-                        new Rectangle
-                        (
-                            x + 2,
-                            y + 5,
-                            Width - 4,
-                            Height - 10
-                        ),
-                        hueVector
+                        (batcher) =>
+                        {
+                            batcher.Draw
+                            (
+                                SolidColorTextureCache.GetTexture(Color.Gray),
+                                new Rectangle
+                                (
+                                    x + 2,
+                                    y + 5,
+                                    Width - 4,
+                                    Height - 10
+                                ),
+                                hueVector,
+                                layerDepth
+                            );
+                            return true;
+                        }
                     );
                 }
 
-                base.Draw(batcher, x, y);
+                base.AddToRenderLists(renderLists, x, y, ref layerDepthRef);
 
                 if (_entry.Items != null && _entry.Items.Count != 0)
                 {
-                    _moreMenuLabel.Draw(batcher, x + Width - _moreMenuLabel.Width, y + (Height >> 1) - (_moreMenuLabel.Height >> 1) - 1);
+                    float layerDepth = layerDepthRef;
+                    renderLists.AddGumpNoAtlas
+                   (
+                       (batcher) =>
+                       {
+                           _moreMenuLabel.Draw(batcher, x + Width - _moreMenuLabel.Width, y + (Height >> 1) - (_moreMenuLabel.Height >> 1) - 1, layerDepth);
+                           return true;
+                       }
+                   );
                 }
 
                 return true;

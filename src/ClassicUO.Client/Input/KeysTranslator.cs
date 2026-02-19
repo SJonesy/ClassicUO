@@ -1,38 +1,8 @@
-﻿#region license
-
-// Copyright (c) 2024, andreakarasho
-// All rights reserved.
-// 
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. All advertising materials mentioning features or use of this software
-//    must display the following acknowledgement:
-//    This product includes software developed by andreakarasho - https://github.com/andreakarasho
-// 4. Neither the name of the copyright holder nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-// 
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ''AS IS'' AND ANY
-// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY
-// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-#endregion
+﻿// SPDX-License-Identifier: BSD-2-Clause
 
 using System.Collections.Generic;
 using System.Text;
-using SDL2;
+using SDL3;
 
 namespace ClassicUO.Input
 {
@@ -52,7 +22,7 @@ namespace ClassicUO.Input
             { SDL.SDL_Keycode.SDLK_DOLLAR, "$" },
             { SDL.SDL_Keycode.SDLK_PERCENT, "%" },
             //{ SDL.SDL_Keycode.SDLK_AMPERSAND = 38, // 0x00000026
-            { SDL.SDL_Keycode.SDLK_QUOTE, "'" },
+            { SDL.SDL_Keycode.SDLK_APOSTROPHE, "'" },
             //{ SDL.SDL_Keycode.SDLK_LEFTPAREN = 40, // 0x00000028
             //{ SDL.SDL_Keycode.SDLK_RIGHTPAREN = 41, // 0x00000029
             { SDL.SDL_Keycode.SDLK_ASTERISK, "*" },
@@ -83,33 +53,33 @@ namespace ClassicUO.Input
             { SDL.SDL_Keycode.SDLK_RIGHTBRACKET, "]" },
             { SDL.SDL_Keycode.SDLK_CARET, "-" },
             { SDL.SDL_Keycode.SDLK_UNDERSCORE, "_" },
-            { SDL.SDL_Keycode.SDLK_BACKQUOTE, "BACKQUOTE" }, //  = 96, // 0x00000060
-            { SDL.SDL_Keycode.SDLK_a, "A" },
-            { SDL.SDL_Keycode.SDLK_b, "B" },
-            { SDL.SDL_Keycode.SDLK_c, "C" },
-            { SDL.SDL_Keycode.SDLK_d, "D" },
-            { SDL.SDL_Keycode.SDLK_e, "E" },
-            { SDL.SDL_Keycode.SDLK_f, "F" },
-            { SDL.SDL_Keycode.SDLK_g, "G" },
-            { SDL.SDL_Keycode.SDLK_h, "H" },
-            { SDL.SDL_Keycode.SDLK_i, "I" },
-            { SDL.SDL_Keycode.SDLK_j, "J" },
-            { SDL.SDL_Keycode.SDLK_k, "K" },
-            { SDL.SDL_Keycode.SDLK_l, "L" },
-            { SDL.SDL_Keycode.SDLK_m, "M" },
-            { SDL.SDL_Keycode.SDLK_n, "N" },
-            { SDL.SDL_Keycode.SDLK_o, "O" },
-            { SDL.SDL_Keycode.SDLK_p, "P" },
-            { SDL.SDL_Keycode.SDLK_q, "Q" },
-            { SDL.SDL_Keycode.SDLK_r, "R" },
-            { SDL.SDL_Keycode.SDLK_s, "S" },
-            { SDL.SDL_Keycode.SDLK_t, "T" },
-            { SDL.SDL_Keycode.SDLK_u, "U" },
-            { SDL.SDL_Keycode.SDLK_v, "V" },
-            { SDL.SDL_Keycode.SDLK_w, "W" },
-            { SDL.SDL_Keycode.SDLK_x, "X" },
-            { SDL.SDL_Keycode.SDLK_y, "Y" },
-            { SDL.SDL_Keycode.SDLK_z, "Z" },
+            { SDL.SDL_Keycode.SDLK_GRAVE, "BACKQUOTE" }, //  = 96, // 0x00000060
+            { SDL.SDL_Keycode.SDLK_A, "A" },
+            { SDL.SDL_Keycode.SDLK_B, "B" },
+            { SDL.SDL_Keycode.SDLK_C, "C" },
+            { SDL.SDL_Keycode.SDLK_D, "D" },
+            { SDL.SDL_Keycode.SDLK_E, "E" },
+            { SDL.SDL_Keycode.SDLK_F, "F" },
+            { SDL.SDL_Keycode.SDLK_G, "G" },
+            { SDL.SDL_Keycode.SDLK_H, "H" },
+            { SDL.SDL_Keycode.SDLK_I, "I" },
+            { SDL.SDL_Keycode.SDLK_J, "J" },
+            { SDL.SDL_Keycode.SDLK_K, "K" },
+            { SDL.SDL_Keycode.SDLK_L, "L" },
+            { SDL.SDL_Keycode.SDLK_M, "M" },
+            { SDL.SDL_Keycode.SDLK_N, "N" },
+            { SDL.SDL_Keycode.SDLK_O, "O" },
+            { SDL.SDL_Keycode.SDLK_P, "P" },
+            { SDL.SDL_Keycode.SDLK_Q, "Q" },
+            { SDL.SDL_Keycode.SDLK_R, "R" },
+            { SDL.SDL_Keycode.SDLK_S, "S" },
+            { SDL.SDL_Keycode.SDLK_T, "T" },
+            { SDL.SDL_Keycode.SDLK_U, "U" },
+            { SDL.SDL_Keycode.SDLK_V, "V" },
+            { SDL.SDL_Keycode.SDLK_W, "W" },
+            { SDL.SDL_Keycode.SDLK_X, "X" },
+            { SDL.SDL_Keycode.SDLK_Y, "Y" },
+            { SDL.SDL_Keycode.SDLK_Z, "Z" },
             { SDL.SDL_Keycode.SDLK_DELETE, "DEL" },
             { SDL.SDL_Keycode.SDLK_CAPSLOCK, "CAPS" },
             { SDL.SDL_Keycode.SDLK_F1, "F1" },
@@ -281,18 +251,18 @@ namespace ClassicUO.Input
 
         private static readonly Dictionary<SDL.SDL_Keymod, string> _mods = new Dictionary<SDL.SDL_Keymod, string>
         {
-            { SDL.SDL_Keymod.KMOD_LSHIFT, "Shift" },
-            { SDL.SDL_Keymod.KMOD_RSHIFT, "R Shift" },
+            { SDL.SDL_Keymod.SDL_KMOD_LSHIFT, "Shift" },
+            { SDL.SDL_Keymod.SDL_KMOD_RSHIFT, "R Shift" },
 
-            { SDL.SDL_Keymod.KMOD_LCTRL, "Ctrl" },
-            { SDL.SDL_Keymod.KMOD_RCTRL, "R Ctrl" },
+            { SDL.SDL_Keymod.SDL_KMOD_LCTRL, "Ctrl" },
+            { SDL.SDL_Keymod.SDL_KMOD_RCTRL, "R Ctrl" },
 
-            { SDL.SDL_Keymod.KMOD_LALT, "Alt" },
-            { SDL.SDL_Keymod.KMOD_RALT, "R Alt" }
+            { SDL.SDL_Keymod.SDL_KMOD_LALT, "Alt" },
+            { SDL.SDL_Keymod.SDL_KMOD_RALT, "R Alt" }
         };
 
 
-        public static string TryGetKey(SDL.SDL_Keycode key, SDL.SDL_Keymod mod = SDL.SDL_Keymod.KMOD_NONE)
+        public static string TryGetKey(SDL.SDL_Keycode key, SDL.SDL_Keymod mod = SDL.SDL_Keymod.SDL_KMOD_NONE)
         {
             if (_keys.TryGetValue(key, out string value))
             {
@@ -343,9 +313,9 @@ namespace ClassicUO.Input
 
         private static void AddPrefix(StringBuilder sb, SDL.SDL_Keymod mod)
         {
-            bool isshift = (mod & SDL.SDL_Keymod.KMOD_SHIFT) != SDL.SDL_Keymod.KMOD_NONE;
-            bool isctrl = (mod & SDL.SDL_Keymod.KMOD_CTRL) != SDL.SDL_Keymod.KMOD_NONE;
-            bool isalt = (mod & SDL.SDL_Keymod.KMOD_ALT) != SDL.SDL_Keymod.KMOD_NONE;
+            bool isshift = (mod & SDL.SDL_Keymod.SDL_KMOD_SHIFT) != SDL.SDL_Keymod.SDL_KMOD_NONE;
+            bool isctrl = (mod & SDL.SDL_Keymod.SDL_KMOD_CTRL) != SDL.SDL_Keymod.SDL_KMOD_NONE;
+            bool isalt = (mod & SDL.SDL_Keymod.SDL_KMOD_ALT) != SDL.SDL_Keymod.SDL_KMOD_NONE;
 
             if (isshift)
             {

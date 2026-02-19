@@ -1,34 +1,4 @@
-﻿#region license
-
-// Copyright (c) 2024, andreakarasho
-// All rights reserved.
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. All advertising materials mentioning features or use of this software
-//    must display the following acknowledgement:
-//    This product includes software developed by andreakarasho - https://github.com/andreakarasho
-// 4. Neither the name of the copyright holder nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ''AS IS'' AND ANY
-// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY
-// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-#endregion
+﻿// SPDX-License-Identifier: BSD-2-Clause
 
 using System;
 using System.Collections.Generic;
@@ -48,7 +18,7 @@ using ClassicUO.Utility.Platforms;
 using CUO_API;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using SDL2;
+using SDL3;
 
 namespace ClassicUO.Network
 {
@@ -188,7 +158,7 @@ namespace ClassicUO.Network
             _send = OnPluginSend;
             _recv_new = OnPluginRecv_new;
             _send_new = OnPluginSend_new;
-            _getPacketLength = PacketsTable.GetPacketLength;
+            _getPacketLength = OnGetPacketLength;
             _getPlayerPosition = GetPlayerPosition;
             _castSpell = GameActions.CastSpell;
             _getStaticImage = GetStaticImage;
@@ -199,15 +169,13 @@ namespace ClassicUO.Network
             _get_tile_data = GetTileData;
             _get_cliloc = GetCliloc;
 
-            SDL.SDL_SysWMinfo info = new SDL.SDL_SysWMinfo();
-            SDL.SDL_VERSION(out info.version);
-            SDL.SDL_GetWindowWMInfo(Client.Game.Window.Handle, ref info);
-
             IntPtr hwnd = IntPtr.Zero;
-
-            if (info.subsystem == SDL.SDL_SYSWM_TYPE.SDL_SYSWM_WINDOWS)
+            if (CUOEnviroment.IsWindows)
             {
-                hwnd = info.info.win.window;
+                hwnd = SDL.SDL_GetPointerProperty(
+                    SDL.SDL_GetWindowProperties(Client.Game.Window.Handle),
+                    SDL.SDL_PROP_WINDOW_WIN32_HWND_POINTER, IntPtr.Zero
+                );
             }
 
             PluginHeader header = new PluginHeader
@@ -276,8 +244,8 @@ namespace ClassicUO.Network
                 {
                     Client.Game.PluginHost?.LoadPlugin(PluginPath);
 
-                    //Client.Game.AssistantHost.OnSocketConnected += (o, e) => { 
-                    //    Client.Game.AssistantHost.PluginInitialize(PluginPath); 
+                    //Client.Game.AssistantHost.OnSocketConnected += (o, e) => {
+                    //    Client.Game.AssistantHost.PluginInitialize(PluginPath);
                     //};
                     //Client.Game.AssistantHost.Connect("127.0.0.1", 7777);
 
@@ -454,7 +422,7 @@ namespace ClassicUO.Network
         {
             if (index >= 0 && index < ArtLoader.MAX_STATIC_DATA_INDEX_COUNT)
             {
-                ref StaticTiles st = ref TileDataLoader.Instance.StaticData[index];
+                ref StaticTiles st = ref Client.Game.UO.FileManager.TileData.StaticData[index];
 
                 flags = (ulong)st.Flags;
                 weight = st.Weight;
@@ -480,7 +448,7 @@ namespace ClassicUO.Network
         {
             if (index >= 0 && index < ArtLoader.MAX_STATIC_DATA_INDEX_COUNT)
             {
-                ref LandTiles st = ref TileDataLoader.Instance.LandData[index];
+                ref LandTiles st = ref Client.Game.UO.FileManager.TileData.LandData[index];
 
                 flags = (ulong)st.Flags;
                 textid = st.TexID;
@@ -494,14 +462,14 @@ namespace ClassicUO.Network
 
         private static bool GetCliloc(int cliloc, string args, bool capitalize, out string buffer)
         {
-            buffer = ClilocLoader.Instance.Translate(cliloc, args, capitalize);
+            buffer = Client.Game.UO.FileManager.Clilocs.Translate(cliloc, args, capitalize);
 
             return buffer != null;
         }
 
         private static void GetStaticImage(ushort g, ref CUO_API.ArtInfo info)
         {
-            //ArtLoader.Instance.TryGetEntryInfo(g, out long address, out long size, out long compressedsize);
+            //Client.Game.UO.FileManager.Arts.TryGetEntryInfo(g, out long address, out long size, out long compressedsize);
             //info.Address = address;
             //info.Size = size;
             //info.CompressedSize = compressedsize;
@@ -781,6 +749,11 @@ namespace ClassicUO.Network
                     Log.Error("Plugin initialization failed, please re login");
                 }
             }
+        }
+
+        internal static short OnGetPacketLength(int id)
+        {
+            return NetClient.Socket.PacketsTable.GetPacketLength(id);
         }
 
         internal static bool OnPluginRecv(ref byte[] data, ref int length)

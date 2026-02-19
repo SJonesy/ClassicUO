@@ -1,48 +1,16 @@
-#region license
-
-// Copyright (c) 2024, andreakarasho
-// All rights reserved.
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. All advertising materials mentioning features or use of this software
-//    must display the following acknowledgement:
-//    This product includes software developed by andreakarasho - https://github.com/andreakarasho
-// 4. Neither the name of the copyright holder nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ''AS IS'' AND ANY
-// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY
-// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-#endregion
+// SPDX-License-Identifier: BSD-2-Clause
 
 using System;
 using System.Buffers;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Text;
 using ClassicUO.Configuration;
 using ClassicUO.Game;
 using ClassicUO.Game.Data;
 using ClassicUO.Game.GameObjects;
 using ClassicUO.Game.Managers;
-using ClassicUO.Game.UI.Controls;
 using ClassicUO.IO;
 using ClassicUO.Assets;
 using ClassicUO.Utility;
@@ -55,7 +23,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0x03;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
             writer.WriteUInt8(ID);
@@ -122,7 +90,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0x73;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
             writer.WriteUInt8(ID);
@@ -153,7 +121,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0x06;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
             writer.WriteUInt8(ID);
@@ -192,7 +160,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0xEF;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
             writer.WriteUInt8(ID);
@@ -237,7 +205,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0x80;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
             writer.WriteUInt8(ID);
@@ -270,7 +238,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0xA0;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
             writer.WriteUInt8(ID);
@@ -302,7 +270,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0x91;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
             writer.WriteUInt8(ID);
@@ -354,7 +322,7 @@ namespace ClassicUO.Network
                 ++skillcount;
             }
 
-            int length = PacketsTable.GetPacketLength(id);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
             writer.WriteUInt8(id);
@@ -479,7 +447,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0x83;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
             writer.WriteUInt8(ID);
@@ -512,7 +480,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0x5D;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
             writer.WriteUInt8(ID);
@@ -549,7 +517,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0x07;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
             writer.WriteUInt8(ID);
@@ -588,7 +556,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0x08;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
             writer.WriteUInt8(ID);
@@ -631,7 +599,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0x08;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
             writer.WriteUInt8(ID);
@@ -666,7 +634,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0x13;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
             writer.WriteUInt8(ID);
@@ -698,7 +666,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0x72;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
             writer.WriteUInt8(ID);
@@ -730,7 +698,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0x9B;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
             writer.WriteUInt8(ID);
@@ -760,7 +728,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0x34;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
             writer.WriteUInt8(ID);
@@ -792,7 +760,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0x34;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
             writer.WriteUInt8(ID);
@@ -824,7 +792,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0x3A;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
             writer.WriteUInt8(ID);
@@ -855,7 +823,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0x09;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
             writer.WriteUInt8(ID);
@@ -885,7 +853,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0x05;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -916,7 +884,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0xBD;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -947,7 +915,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0x03;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -958,7 +926,7 @@ namespace ClassicUO.Network
                 writer.WriteZero(2);
             }
 
-            List<SpeechEntry> entries = SpeechesLoader.Instance.GetKeywords(text);
+            List<SpeechEntry> entries = Client.Game.UO.FileManager.Speeches.GetKeywords(text);
             bool encoded = entries != null && entries.Count != 0;
 
             if (encoded)
@@ -997,7 +965,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0xAD;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -1008,7 +976,7 @@ namespace ClassicUO.Network
                 writer.WriteZero(2);
             }
 
-            List<SpeechEntry> entries = SpeechesLoader.Instance.GetKeywords(text);
+            List<SpeechEntry> entries = Client.Game.UO.FileManager.Speeches.GetKeywords(text);
             bool encoded = entries != null && entries.Count != 0;
 
             if (encoded)
@@ -1094,7 +1062,7 @@ namespace ClassicUO.Network
                 id = ID_OLD;
             }
 
-            int length = PacketsTable.GetPacketLength(id);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -1135,7 +1103,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0x12;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -1167,7 +1135,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0x12;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -1199,7 +1167,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0x12;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -1231,7 +1199,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0x12;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -1263,7 +1231,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0x12;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -1303,7 +1271,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0xB1;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -1354,7 +1322,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0xB1;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -1395,7 +1363,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0x7D;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -1435,7 +1403,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0x7D;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -1468,7 +1436,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0x6F;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -1515,7 +1483,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0x6F;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -1549,7 +1517,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0xD1;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -1588,7 +1556,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0xAC;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -1624,7 +1592,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0x75;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -1656,7 +1624,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0x98;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -1687,7 +1655,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0xA7;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -1729,7 +1697,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0x6C;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -1776,7 +1744,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0x6C;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -1814,7 +1782,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0x6C;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -1850,7 +1818,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0x9A;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -1883,7 +1851,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0xC2;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -1918,7 +1886,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0x95;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -1951,7 +1919,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0xB8;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -1983,7 +1951,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0xB8;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -2018,7 +1986,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0xBF;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -2050,7 +2018,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0xBF;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -2082,7 +2050,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0xBF;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -2115,7 +2083,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0xBF;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -2148,7 +2116,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0xBF;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -2181,7 +2149,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0xBF;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -2214,7 +2182,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0xBF;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -2248,7 +2216,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0xBF;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -2292,7 +2260,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0xBF;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -2325,7 +2293,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0x71;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -2358,7 +2326,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0x71;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -2391,7 +2359,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0x71;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -2458,7 +2426,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0x71;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -2492,7 +2460,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0xF0;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -2523,7 +2491,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0xF0;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -2555,7 +2523,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0xF0;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -2586,7 +2554,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0xBF;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -2619,7 +2587,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0xBF;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -2662,7 +2630,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0xBF;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -2694,7 +2662,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0xBF;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -2727,7 +2695,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0xB3;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -2769,7 +2737,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0xB3;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -2809,7 +2777,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0xB3;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -2841,7 +2809,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0xB3;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -2875,7 +2843,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0xB5;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -2921,7 +2889,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0x56;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -2956,7 +2924,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0xD7;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -2989,7 +2957,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0xD7;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -3022,7 +2990,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0xD7;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -3055,7 +3023,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0x12;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -3088,7 +3056,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0xBF;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -3116,11 +3084,11 @@ namespace ClassicUO.Network
             writer.Dispose();
         }
 
-        public static void Send_MegaClilocRequest(this NetClient socket, ref List<uint> serials)
+        public static void Send_MegaClilocRequest(this NetClient socket, List<uint> serials)
         {
             const byte ID = 0xD6;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -3158,7 +3126,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0xBF;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -3192,7 +3160,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0x3A;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -3224,7 +3192,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0x93;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -3261,7 +3229,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0xD4;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -3302,7 +3270,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0x66;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -3372,7 +3340,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0x66;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -3407,7 +3375,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0x3B;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -3456,7 +3424,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0x9F;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -3495,7 +3463,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0xD7;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -3531,7 +3499,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0xBF;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -3565,7 +3533,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0xBF;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -3598,7 +3566,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0xBF;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -3630,7 +3598,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0xBF;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -3661,7 +3629,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0xBF;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -3700,7 +3668,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0xBF;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -3736,7 +3704,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0xBF;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -3771,7 +3739,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0x22;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -3802,7 +3770,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0x02;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -3840,7 +3808,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0xD7;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -3874,7 +3842,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0xD7;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -3908,7 +3876,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0xD7;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -3942,7 +3910,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0xD7;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -3975,7 +3943,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0xD7;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -4011,7 +3979,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0xD7;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -4045,7 +4013,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0xD7;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -4079,7 +4047,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0xD7;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -4112,7 +4080,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0xD7;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -4145,7 +4113,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0xD7;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -4184,7 +4152,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0xD7;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -4225,7 +4193,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0xD7;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -4266,7 +4234,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0xD7;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -4307,7 +4275,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0xD7;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -4346,7 +4314,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0xC8;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -4386,7 +4354,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0xFA;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -4415,7 +4383,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0xFB;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -4446,7 +4414,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0x2C;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -4473,12 +4441,77 @@ namespace ClassicUO.Network
             writer.Dispose();
         }
 
+        public static void Send_EquipMacroKR(this NetClient socket, ReadOnlySpan<uint> serials)
+        {
+            const byte ID = 0xEC;
+
+            int length = socket.PacketsTable.GetPacketLength(ID);
+
+            var writer = new StackDataWriter(length < 0 ? 64 : length);
+
+            writer.WriteUInt8(ID);
+
+            if (length < 0)
+            {
+                writer.WriteZero(2);
+            }
+
+            writer.WriteUInt8((byte)serials.Length);
+            foreach (ref readonly var serial in serials)
+                writer.WriteUInt32BE(serial);
+
+            if (length < 0)
+            {
+                writer.Seek(1, SeekOrigin.Begin);
+                writer.WriteUInt16BE((ushort)writer.BytesWritten);
+            }
+            else
+            {
+                writer.WriteZero(length - writer.BytesWritten);
+            }
+
+            socket.Send(writer.BufferWritten);
+            writer.Dispose();
+        }
+
+        public static void Send_UnequipMacroKR(this NetClient socket, ReadOnlySpan<Layer> layers)
+        {
+            const byte ID = 0xED;
+
+            int length = socket.PacketsTable.GetPacketLength(ID);
+
+            var writer = new StackDataWriter(length < 0 ? 64 : length);
+
+            writer.WriteUInt8(ID);
+
+            if (length < 0)
+            {
+                writer.WriteZero(2);
+            }
+
+            writer.WriteUInt8((byte)layers.Length);
+            foreach (ref readonly var layer in layers)
+                writer.WriteUInt16BE((byte)layer);
+
+            if (length < 0)
+            {
+                writer.Seek(1, SeekOrigin.Begin);
+                writer.WriteUInt16BE((ushort)writer.BytesWritten);
+            }
+            else
+            {
+                writer.WriteZero(length - writer.BytesWritten);
+            }
+
+            socket.Send(writer.BufferWritten);
+            writer.Dispose();
+        }
 
         public static void Send_UOLive_HashResponse(this NetClient socket, uint block, byte mapIndex, Span<ushort> checksums)
         {
             const byte ID = 0x3F;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -4518,7 +4551,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0xBF;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -4595,7 +4628,7 @@ namespace ClassicUO.Network
         {
             const byte ID = 0xBF;
 
-            int length = PacketsTable.GetPacketLength(ID);
+            int length = socket.PacketsTable.GetPacketLength(ID);
 
             var writer = new StackDataWriter(length < 0 ? 64 : length);
 
@@ -4609,9 +4642,9 @@ namespace ClassicUO.Network
             writer.WriteUInt16BE(0xBEEF);
             writer.WriteUInt8(0x01);
 
-            writer.WriteUInt16BE((ushort)SkillsLoader.Instance.SortedSkills.Count);
+            writer.WriteUInt16BE((ushort)Client.Game.UO.FileManager.Skills.SortedSkills.Count);
 
-            foreach (SkillEntry s in SkillsLoader.Instance.SortedSkills)
+            foreach (SkillEntry s in Client.Game.UO.FileManager.Skills.SortedSkills)
             {
                 writer.WriteUInt16BE((ushort) s.Index);
                 writer.WriteBool(s.HasAction);

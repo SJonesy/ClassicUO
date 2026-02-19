@@ -1,36 +1,5 @@
-#region license
+// SPDX-License-Identifier: BSD-2-Clause
 
-// Copyright (c) 2024, andreakarasho
-// All rights reserved.
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. All advertising materials mentioning features or use of this software
-//    must display the following acknowledgement:
-//    This product includes software developed by andreakarasho - https://github.com/andreakarasho
-// 4. Neither the name of the copyright holder nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ''AS IS'' AND ANY
-// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY
-// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-#endregion
-
-using ClassicUO.IO;
 using ClassicUO.Assets;
 using ClassicUO.Renderer;
 using ClassicUO.Utility;
@@ -57,7 +26,6 @@ namespace ClassicUO.Game
         ExtraHeight = 0x0100,
         CropTexture = 0x0200
     }
-
     internal sealed class RenderedText
     {
         private static readonly QueuedPool<RenderedText> _pool = new QueuedPool<RenderedText>(
@@ -129,7 +97,7 @@ namespace ClassicUO.Game
 
                         if (IsHTML)
                         {
-                            FontsLoader.Instance.SetUseHTML(false);
+                            Client.Game.UO.FileManager.Fonts.SetUseHTML(false);
                         }
 
                         Links.Clear();
@@ -143,7 +111,7 @@ namespace ClassicUO.Game
 
                         if (IsUnicode)
                         {
-                            _info = FontsLoader.Instance.GetInfoUnicode(
+                            _info = Client.Game.UO.FileManager.Fonts.GetInfoUnicode(
                                 Font,
                                 Text,
                                 Text.Length,
@@ -156,7 +124,7 @@ namespace ClassicUO.Game
                         }
                         else
                         {
-                            _info = FontsLoader.Instance.GetInfoASCII(
+                            _info = Client.Game.UO.FileManager.Fonts.GetInfoASCII(
                                 Font,
                                 Text,
                                 Text.Length,
@@ -232,7 +200,7 @@ namespace ClassicUO.Game
 
             if (IsUnicode)
             {
-                (p.X, p.Y) = FontsLoader.Instance.GetCaretPosUnicode(
+                (p.X, p.Y) = Client.Game.UO.FileManager.Fonts.GetCaretPosUnicode(
                     Font,
                     Text,
                     caret_index,
@@ -243,7 +211,7 @@ namespace ClassicUO.Game
             }
             else
             {
-                (p.X, p.Y) = FontsLoader.Instance.GetCaretPosASCII(
+                (p.X, p.Y) = Client.Game.UO.FileManager.Fonts.GetCaretPosASCII(
                     Font,
                     Text,
                     caret_index,
@@ -373,10 +341,10 @@ namespace ClassicUO.Game
 
                         if (IsUnicode)
                         {
-                            return FontsLoader.Instance.GetCharWidthUnicode(Font, c);
+                            return Client.Game.UO.FileManager.Fonts.GetCharWidthUnicode(Font, c);
                         }
 
-                        return FontsLoader.Instance.GetCharWidthASCII(Font, c);
+                        return Client.Game.UO.FileManager.Fonts.GetCharWidthASCII(Font, c);
                     }
                 }
 
@@ -391,10 +359,10 @@ namespace ClassicUO.Game
         {
             if (IsUnicode)
             {
-                return FontsLoader.Instance.GetCharWidthUnicode(Font, c);
+                return Client.Game.UO.FileManager.Fonts.GetCharWidthUnicode(Font, c);
             }
 
-            return FontsLoader.Instance.GetCharWidthASCII(Font, c);
+            return Client.Game.UO.FileManager.Fonts.GetCharWidthASCII(Font, c);
         }
 
         public bool Draw(
@@ -407,7 +375,8 @@ namespace ClassicUO.Game
             int dheight,
             int offsetX,
             int offsetY,
-            ushort hue = 0
+            float layerDepth,
+            ushort hue = 0            
         )
         {
             if (string.IsNullOrEmpty(Text) || Texture == null || IsDestroyed || Texture.IsDisposed)
@@ -485,7 +454,8 @@ namespace ClassicUO.Game
                 Texture,
                 new Rectangle(dx, dy, dwidth, dheight),
                 new Rectangle(srcX, srcY, srcWidth, srcHeight),
-                hueVector
+                hueVector,
+                layerDepth
             );
 
             return true;
@@ -499,6 +469,7 @@ namespace ClassicUO.Game
             int sy,
             int swidth,
             int sheight,
+            float layerDepth,
             int hue = -1
         )
         {
@@ -553,13 +524,14 @@ namespace ClassicUO.Game
                 Texture,
                 new Vector2(dx, dy),
                 new Rectangle(sx, sy, swidth, sheight),
-                hueVector
+                hueVector,
+                layerDepth
             );
 
             return true;
         }
 
-        public bool Draw(UltimaBatcher2D batcher, int x, int y, float alpha = 1, ushort hue = 0)
+        public bool Draw(UltimaBatcher2D batcher, int x, int y, float depth, float alpha = 1, ushort hue = 0, float scale = 1f)
         {
             if (string.IsNullOrEmpty(Text) || Texture == null || IsDestroyed || Texture.IsDisposed)
             {
@@ -598,7 +570,9 @@ namespace ClassicUO.Game
                 hueVector.Y = 0;
             }
 
-            batcher.Draw(Texture, new Rectangle(x, y, Width, Height), hueVector);
+            var scaleWidth = (int)(Width * scale);
+            var scaleHeight = (int)(Height * scale);
+            batcher.Draw(Texture, new Rectangle(x, y, scaleWidth, scaleHeight), hueVector, depth);
 
             return true;
         }
@@ -613,15 +587,15 @@ namespace ClassicUO.Game
 
             if (IsHTML)
             {
-                FontsLoader.Instance.SetUseHTML(true, HTMLColor, HasBackgroundColor);
+                Client.Game.UO.FileManager.Fonts.SetUseHTML(true, HTMLColor, HasBackgroundColor);
             }
 
-            FontsLoader.Instance.RecalculateWidthByInfo = RecalculateWidthByInfo;
+            Client.Game.UO.FileManager.Fonts.RecalculateWidthByInfo = RecalculateWidthByInfo;
 
             FontsLoader.FontInfo fi;
             if (IsUnicode)
             {
-                fi = FontsLoader.Instance.GenerateUnicode(
+                fi = Client.Game.UO.FileManager.Fonts.GenerateUnicode(
                     Font,
                     Text,
                     Hue,
@@ -635,7 +609,7 @@ namespace ClassicUO.Game
             }
             else
             {
-                fi = FontsLoader.Instance.GenerateASCII(
+                fi = Client.Game.UO.FileManager.Fonts.GenerateASCII(
                     Font,
                     Text,
                     Hue,
@@ -702,10 +676,10 @@ namespace ClassicUO.Game
 
             if (IsHTML)
             {
-                FontsLoader.Instance.SetUseHTML(false);
+                Client.Game.UO.FileManager.Fonts.SetUseHTML(false);
             }
 
-            FontsLoader.Instance.RecalculateWidthByInfo = false;
+            Client.Game.UO.FileManager.Fonts.RecalculateWidthByInfo = false;
         }
 
         public void Destroy()

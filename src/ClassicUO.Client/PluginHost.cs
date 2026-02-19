@@ -2,7 +2,7 @@
 using ClassicUO.Game;
 using ClassicUO.Network;
 using Microsoft.Xna.Framework.Graphics;
-using SDL2;
+using SDL3;
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
@@ -180,12 +180,14 @@ namespace ClassicUO
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         delegate IntPtr dGetCliloc(int cliloc, IntPtr args, bool capitalize);
         [MarshalAs(UnmanagedType.FunctionPtr)]
+#pragma warning disable CS0169
         private readonly dGetCliloc _getCliloc;
+#pragma warning restore CS0169
 
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         delegate short dGetPacketLength(int id);
         [MarshalAs(UnmanagedType.FunctionPtr)]
-        private readonly dGetPacketLength _packetLength = PacketsTable.GetPacketLength;
+        private readonly dGetPacketLength _packetLength = getPacketLength;
 
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         delegate bool dGetPlayerPosition(out int x, out int y, out int z);
@@ -215,6 +217,11 @@ namespace ClassicUO
         private readonly dOnPluginReflectionCommand _reflectionCmd = reflectionCmd;
 
 
+        static short getPacketLength(int id)
+        {
+            return NetClient.Socket.PacketsTable.GetPacketLength(id);
+        }
+
         static void setWindowTitle(IntPtr ptr)
         {
             var title = SDL2.SDL.UTF8_ToManaged(ptr);
@@ -227,11 +234,13 @@ namespace ClassicUO
 
             switch (Unsafe.AsRef<int>(cmd.ToPointer()))
             {
+#pragma warning disable CS0618
                 case 1:
                     GameActions.UsePrimaryAbility();
                     break;
                 case 2:
                     GameActions.UseSecondaryAbility();
+#pragma warning restore CS0618
                     break;
                 case 3:
                     var subCmd = Unsafe.AsRef<(int, sbyte)>(cmd.ToPointer());
@@ -249,7 +258,10 @@ namespace ClassicUO
                     }
 
                     break;
-
+                case 4:
+                    var args = Unsafe.AsRef<(int, int, int, int, int)>(cmd.ToPointer());
+                    bool started = Client.Game.UO?.World?.Player?.Pathfinder?.WalkTo(args.Item2, args.Item3, args.Item4, args.Item5) ?? false;
+                    return (IntPtr)Unsafe.AsPointer(ref started);
             }
 
             return IntPtr.Zero;
@@ -348,7 +360,7 @@ namespace ClassicUO
         public bool Hotkey(int key, int mod, bool pressed);
         public void Mouse(int button, int wheel);
         public void GetCommandList(out IntPtr listPtr, out int listCount);
-        public unsafe int SdlEvent(SDL2.SDL.SDL_Event* ev);
+        public unsafe int SdlEvent(SDL3.SDL.SDL_Event* ev);
         public void UpdatePlayerPosition(int x, int y, int z);
         public bool PacketIn(ArraySegment<byte> buffer);
         public bool PacketOut(Span<byte> buffer);
