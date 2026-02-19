@@ -97,8 +97,6 @@ namespace ClassicUO.Game.Managers
                 hue++;
             }
 
-            duration *= Constants.ITEM_EFFECT_ANIMATION_DELAY;
-
             switch (type)
             {
                 case GraphicEffectType.Moving:
@@ -139,6 +137,7 @@ namespace ClassicUO.Game.Managers
                     break;
 
                 case GraphicEffectType.DragEffect:
+                    duration *= Constants.ITEM_EFFECT_ANIMATION_DELAY;
 
                     if (graphic <= 0)
                     {
@@ -175,6 +174,8 @@ namespace ClassicUO.Game.Managers
                     break;
 
                 case GraphicEffectType.Lightning:
+                    duration *= Constants.ITEM_EFFECT_ANIMATION_DELAY;
+
                     effect = new LightningEffect
                     (
                         _world,
@@ -189,6 +190,7 @@ namespace ClassicUO.Game.Managers
                     break;
 
                 case GraphicEffectType.FixedXYZ:
+                    duration *= Constants.ITEM_EFFECT_ANIMATION_DELAY;
 
                     if (graphic <= 0)
                     {
@@ -214,6 +216,7 @@ namespace ClassicUO.Game.Managers
                     break;
 
                 case GraphicEffectType.FixedFrom:
+                    duration *= Constants.ITEM_EFFECT_ANIMATION_DELAY;
 
                     if (graphic <= 0)
                     {

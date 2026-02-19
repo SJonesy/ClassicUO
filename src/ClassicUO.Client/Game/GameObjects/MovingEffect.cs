@@ -31,7 +31,11 @@
 #endregion
 
 using System;
+using System.IO;
+using ClassicUO.Assets;
+using ClassicUO.Game.Data;
 using ClassicUO.Game.Managers;
+using ClassicUO.Utility.Logging;
 using Microsoft.Xna.Framework;
 
 namespace ClassicUO.Game.GameObjects
@@ -68,7 +72,6 @@ namespace ClassicUO.Game.GameObjects
             Offset.X += 22;
 
             Entity source = World.Get(src);
-
             if (SerialHelper.IsValid(src) && source != null)
             {
                 SetSource(source);
@@ -78,9 +81,7 @@ namespace ClassicUO.Game.GameObjects
                 SetSource(xSource, ySource, zSource);
             }
 
-
             Entity target = World.Get(trg);
-
             if (SerialHelper.IsValid(trg) && target != null)
             {
                 SetTarget(target);
@@ -89,19 +90,232 @@ namespace ClassicUO.Game.GameObjects
             {
                 SetTarget(xTarget, yTarget, zTarget);
             }
+
+            MovingEffectEndTime = duration > 0 ? Time.Ticks + (duration * 100) : -1f;
+            LastTimeInTicks = Time.Ticks;
         }
 
         public readonly bool FixedDir;
 
+        public float MovingEffectEndTime = 0f;
+        private float LastTimeInTicks = 0f;
 
         public override void Update()
         {
             base.Update();
-            UpdateOffset();
+
+            if (MovingEffectEndTime > 0f)
+            {
+                MoveBasedOnDurationV2();
+            }
+            else
+            {
+                MoveBasedOnSpeed();
+            }
         }
 
+        private int GetCharacterHeightOffset(Mobile m)
+        {
+            int yOffset = 0;
+            if (m.IsMounted)
+            {
+                Item mount = m.FindItemByLayer(Layer.Mount);
+                if (mount != null)
+                {
+                    ushort model = mount.GetGraphicForAnimation();
+                    /*
+                    if (model != 0xFFFF && model < Constants.MAX_ANIMATIONS_DATA_INDEX_COUNT)
+                    {
+                        yOffset += AnimationsLoader.Instance.GetMountedHeightOffset(model) + Constants.DEFAULT_CHARACTER_HEIGHT;
+                    }
+                    */
+                }
+            }
+            else
+            {
+                yOffset += Constants.DEFAULT_CHARACTER_HEIGHT / 2;
+            }
 
-        private void UpdateOffset()
+            return yOffset;
+        }
+
+        private void MoveBasedOnDurationV2()
+        {
+            uint CurrentTick = Time.Ticks;
+
+            if (IsDestroyed || !IsEnabled)
+            {
+                return;
+            }
+
+            if (MovingEffectEndTime <= CurrentTick)
+            {
+                RemoveMe();
+                return;
+            }
+
+            // Set the Source
+            Vector3 source = new Vector3(X * 22, Y * 22, Z * 4);
+            source.X += (Offset.X + Offset.Y) / 2.0f;
+            source.Y += (Offset.Y - Offset.X) / 2.0f;
+            source.Z += Offset.Z;
+
+            // Set the Target
+            Vector3 target;
+            if (Target != null)
+            {
+                if (Target is Mobile m)
+                    target = new Vector3(Target.X * 22, Target.Y * 22, (Target.Z + 8) * 4);
+                else
+                    target = new Vector3(Target.X * 22, Target.Y * 22, Target.Z * 4);
+                target.X += (Target.Offset.X + Target.Offset.Y) / 2.0f;
+                target.Y += (Target.Offset.Y - Target.Offset.X) / 2.0f;
+                target.Z += Target.Offset.Z;
+            }
+            else
+            {
+                target = new Vector3(TargetX * 22, TargetY * 22, TargetZ * 4);
+            }
+            /*
+            // Determine how far we should move this update
+            float timeSinceLastUpdate = CurrentTick - LastTimeInTicks;
+            float timeRemaining = MovingEffectEndTime - CurrentTick;
+            float percentToTravelThisUpdate = timeSinceLastUpdate / timeRemaining;
+
+            // Get the next point
+            Vector3 offsetToNextPosition = target - source;
+            Vector3 newPosition = source + (offsetToNextPosition * percentToTravelThisUpdate);
+            */
+
+            Vector3.Subtract(ref target, ref source, out Vector3 path);
+
+            var speed = (path.Length() / (MovingEffectEndTime - LastTimeInTicks));
+
+            path.Normalize();
+            Vector3.Multiply(ref path, speed * (CurrentTick - LastTimeInTicks), out path);
+            Vector3.Add(ref source, ref path, out Vector3 newPosition);
+
+            ushort newX = (ushort)(newPosition.X / 22);
+            ushort newY = (ushort)(newPosition.Y / 22);
+            sbyte newZ = (sbyte)(newPosition.Z / 4);
+
+            // Update the effect's real location (for layering/depth calculations)
+            if (newX != X || newY != Y || newZ != Z)
+            {
+                SetInWorldTile(newX, newY, newZ);
+            }
+
+            // Update the offset
+            Offset.X = newPosition.X % 22 - newPosition.Y % 22;
+            Offset.Y = newPosition.X % 22 + newPosition.Y % 22;
+            Offset.Z = newPosition.Z % 4;
+
+            // Update the angle
+            AngleToTarget = GetEffectAngle();
+
+            // Set persistent values for next Update()
+            LastTimeInTicks = CurrentTick;
+
+            Log.Trace($"Updated MovingEffect: ({CurrentTick}) Current: {X}x {Y}y {Z}z | Target: {Target.X}x {Target.Y}y {Target.Z}z | Offset: {Offset.X}x {Offset.Y}y {Offset.Z}z");
+        }
+
+        private void MoveBasedOnDuration()
+        {
+            uint CurrentTick = Time.Ticks;
+
+            if (MovingEffectEndTime <= CurrentTick)
+            {
+                RemoveMe();
+                return;
+            }
+
+            // Update the Target if it's alive and has moved
+            if (Target != null && !Target.IsDestroyed && (Target.X != TargetX || Target.Y != TargetY || TargetZ != Target.Z))
+            {
+                TargetX = Target.X;
+                TargetY = Target.Y;
+                TargetZ = Target.Z;
+            }
+
+            // Initialize SourceScreenPosition, CurrentScreenPosition, and TargetScreenPosition
+            int offsetSourceX = (int)(X - World.Player.X);
+            int offsetSourceY = (int)(Y - World.Player.Y);
+            int offsetSourceZ = (int)(Z - World.Player.Z);
+            Vector2 currentScreenPosition = new Vector2((offsetSourceX - offsetSourceY) * 22, (offsetSourceX + offsetSourceY) * 22 - offsetSourceZ * 4);
+            int offsetTargetX = TargetX - World.Player.X;
+            int offsetTargetY = TargetY - World.Player.Y;
+            int offsetTargetZ = TargetZ - World.Player.Z;
+            Vector2 targetScreenPosition = new Vector2((offsetTargetX - offsetTargetY) * 22, (offsetTargetX + offsetTargetY) * 22 - offsetTargetZ * 4);
+
+            // Determine how far we should move this update
+            float timeSinceLastUpdate = CurrentTick - LastTimeInTicks;
+            float timeRemaining = MovingEffectEndTime - CurrentTick;
+            float percentToTravelThisUpdate = timeSinceLastUpdate / timeRemaining;
+
+            // Calculate the next point (https://math.stackexchange.com/questions/333350/moving-point-along-the-vector)
+            Vector2 offsetToNextPosition = targetScreenPosition - currentScreenPosition;
+            Vector2 nextScreenPosition = currentScreenPosition + (offsetToNextPosition * percentToTravelThisUpdate);
+
+            // Offset is the actual screen position to draw the effect at, relative to the origin at 0,0
+            // Adding TILE_SIZE to X makes the effect start from the center of the sender and end in the center of the target
+            Offset.X = nextScreenPosition.X - currentScreenPosition.X + 22;
+            Offset.Y = nextScreenPosition.Y - currentScreenPosition.Y;
+
+            // Set the effect angle to the target
+            AngleToTarget = GetEffectAngle();
+
+            // Move the source 
+            Vector3 source = new Vector3(X * 22, Y * 22, Z * 4);
+            source.X += (Offset.X + Offset.Y) / 2.0f;
+            source.Y += (Offset.Y - Offset.X) / 2.0f;
+            source.Z += Offset.Z;
+            Vector3 path = new Vector3(offsetToNextPosition.X, offsetToNextPosition.Y, TargetZ);
+            Vector3.Add(ref source, ref path, out Vector3 newPosition);
+            ushort newX = (ushort)(newPosition.X / 22);
+            ushort newY = (ushort)(newPosition.Y / 22);
+            sbyte newZ = (sbyte)(newPosition.Z / 4);
+            if (newX != X || newY != Y || newZ != Z)
+            {
+                SetInWorldTile(newX, newY, newZ);
+            }
+
+            // Set persistent values for next Update()
+            LastTimeInTicks = CurrentTick;
+
+            Log.Trace($"Updated MovingEffect: ({CurrentTick}) CurrentScreenPosition: {currentScreenPosition.X}x {currentScreenPosition.Y}y | Offset: {Offset.X}x {Offset.Y}y | TargetScreenPosition: {targetScreenPosition.X}x {targetScreenPosition.Y}y");
+        }
+
+        // This was copied from MoveBasedOnSpeed(). 
+        private float GetEffectAngle()
+        {
+            (int sX, int sY, int sZ) = GetSource();
+            int offsetSourceX = sX - World.Player.X;
+            int offsetSourceY = sY - World.Player.Y;
+            int offsetSourceZ = sZ - World.Player.Z;
+
+            (int tX, int tY, int tZ) = GetTarget();
+            int offsetTargetX = tX - World.Player.X;
+            int offsetTargetY = tY - World.Player.Y;
+            int offsetTargetZ = tZ - World.Player.Z;
+
+            Vector2 source = new Vector2((offsetSourceX - offsetSourceY) * 22, (offsetSourceX + offsetSourceY) * 22 - offsetSourceZ * 4);
+            source.X += Offset.X;
+            source.Y += Offset.Y;
+            Vector2 target = new Vector2((offsetTargetX - offsetTargetY) * 22, (offsetTargetX + offsetTargetY) * 22 - offsetTargetZ * 4);
+
+            var offset = target - source;
+            var distance = offset.Length();
+            var frameIndependentSpeed = IntervalInMs * Time.Delta;
+
+            if (distance > frameIndependentSpeed)
+            {
+                offset.Normalize();
+            }
+
+            return (float)Math.Atan2(-offset.Y, -offset.X);
+        }
+
+        private void MoveBasedOnSpeed()
         {
             if (Target != null && Target.IsDestroyed)
             {
