@@ -111,14 +111,14 @@ namespace ClassicUO.Game.GameObjects
 
         private void MoveBasedOnDurationV2()
         {
-            uint CurrentTick = Time.Ticks;
+            uint currentTick = Time.Ticks;
 
             if (IsDestroyed || !IsEnabled)
             {
                 return;
             }
 
-            if (MovingEffectEndTime <= CurrentTick)
+            if (MovingEffectEndTime <= currentTick)
             {
                 RemoveMe();
                 return;
@@ -162,7 +162,7 @@ namespace ClassicUO.Game.GameObjects
             var speed = (path.Length() / (MovingEffectEndTime - LastTimeInTicks));
 
             path.Normalize();
-            Vector3.Multiply(ref path, speed * (CurrentTick - LastTimeInTicks), out path);
+            Vector3.Multiply(ref path, speed * (currentTick - LastTimeInTicks), out path);
             Vector3.Add(ref source, ref path, out Vector3 newPosition);
 
             ushort newX = (ushort)(newPosition.X / 22);
@@ -184,9 +184,9 @@ namespace ClassicUO.Game.GameObjects
             AngleToTarget = GetEffectAngle();
 
             // Set persistent values for next Update()
-            LastTimeInTicks = CurrentTick;
+            LastTimeInTicks = currentTick;
 
-            Log.Trace($"Updated MovingEffect: ({CurrentTick}) Current: {X}x {Y}y {Z}z | Target: {Target.X}x {Target.Y}y {Target.Z}z | Offset: {Offset.X}x {Offset.Y}y {Offset.Z}z");
+            Log.Trace($"Updated MovingEffect: ({currentTick}) Current: {X}x {Y}y {Z}z | Target: {Target.X}x {Target.Y}y {Target.Z}z | Offset: {Offset.X}x {Offset.Y}y {Offset.Z}z");
         }
 
         private void MoveBasedOnDuration()
