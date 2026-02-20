@@ -51,6 +51,9 @@ namespace ClassicUO.Game.GameObjects
                 SetSource(xSource, ySource, zSource);
             }
 
+            // Make the projectile start at mid-character height
+            Z += (sbyte)GetHeightOffset(Source);
+
             Entity target = World.Get(trg);
             if (SerialHelper.IsValid(trg) && target != null)
             {
@@ -61,6 +64,10 @@ namespace ClassicUO.Game.GameObjects
                 SetTarget(xTarget, yTarget, zTarget);
             }
 
+            // If the server sends "5" as the duration it will be 500ms. Having 1 byte to work with, I think this is the
+            // way that makes the most sense. I could have gained some granularity and lost some intuitiveness by doing
+            // smaller increments. So "5" could have instead meant "250ms" (50ms each), but this makes the cap  
+            // 12,800 milliseconds (12.8 seconds) which seems a little low. 
             MovingEffectEndTime = duration > 0 ? Time.Ticks + (duration * 100) : -1f;
             LastTimeInTicks = Time.Ticks;
         }
@@ -84,6 +91,27 @@ namespace ClassicUO.Game.GameObjects
             }
         }
 
+        // This is used to fire from and towards the center off characters instead of their feet
+        private int GetHeightOffset(GameObject gameObject)
+        {
+            if (gameObject is not Mobile m)
+            {
+                return 0;
+            }
+
+            if (m.IsMounted)
+            {
+                return Constants.DEFAULT_CHARACTER_HEIGHT;
+            }
+            else
+            {
+                return Constants.DEFAULT_CHARACTER_HEIGHT / 2;
+            }
+        }
+        
+        // This is old code you got from Jaedan. You don't remember what it was going for exactly, but without GetMountedHeightOffset
+        // it's kind of useless. Keeping here for history's sake until you're completely happy with your solution.
+        /*
         private int GetCharacterHeightOffset(Mobile m)
         {
             int yOffset = 0;
@@ -93,12 +121,12 @@ namespace ClassicUO.Game.GameObjects
                 if (mount != null)
                 {
                     ushort model = mount.GetGraphicForAnimation();
-                    /*
-                    if (model != 0xFFFF && model < Constants.MAX_ANIMATIONS_DATA_INDEX_COUNT)
-                    {
-                        yOffset += AnimationsLoader.Instance.GetMountedHeightOffset(model) + Constants.DEFAULT_CHARACTER_HEIGHT;
-                    }
-                    */
+                    
+                    //if (model != 0xFFFF && model < Constants.MAX_ANIMATIONS_DATA_INDEX_COUNT)
+                    //{
+                        //yOffset += AnimationsLoader.Instance.GetMountedHeightOffset(model) + Constants.DEFAULT_CHARACTER_HEIGHT;
+                    //}
+                    
                 }
             }
             else
@@ -108,6 +136,7 @@ namespace ClassicUO.Game.GameObjects
 
             return yOffset;
         }
+        */
 
         private void MoveBasedOnDurationV2()
         {
@@ -134,10 +163,7 @@ namespace ClassicUO.Game.GameObjects
             Vector3 target;
             if (Target != null)
             {
-                if (Target is Mobile m)
-                    target = new Vector3(Target.X * 22, Target.Y * 22, (Target.Z + 8) * 4);
-                else
-                    target = new Vector3(Target.X * 22, Target.Y * 22, Target.Z * 4);
+                target = new Vector3(Target.X * 22, Target.Y * 22, (Target.Z + GetHeightOffset(Target)) * 4);
                 target.X += (Target.Offset.X + Target.Offset.Y) / 2.0f;
                 target.Y += (Target.Offset.Y - Target.Offset.X) / 2.0f;
                 target.Z += Target.Offset.Z;
@@ -146,16 +172,6 @@ namespace ClassicUO.Game.GameObjects
             {
                 target = new Vector3(TargetX * 22, TargetY * 22, TargetZ * 4);
             }
-            /*
-            // Determine how far we should move this update
-            float timeSinceLastUpdate = CurrentTick - LastTimeInTicks;
-            float timeRemaining = MovingEffectEndTime - CurrentTick;
-            float percentToTravelThisUpdate = timeSinceLastUpdate / timeRemaining;
-
-            // Get the next point
-            Vector3 offsetToNextPosition = target - source;
-            Vector3 newPosition = source + (offsetToNextPosition * percentToTravelThisUpdate);
-            */
 
             Vector3.Subtract(ref target, ref source, out Vector3 path);
 
